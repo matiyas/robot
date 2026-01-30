@@ -15,9 +15,14 @@ NC='\033[0m' # No Color
 
 # Print colored messages
 print_header() {
-    echo -e "${BLUE}========================================${NC}"
-    echo -e "${BLUE}$1${NC}"
-    echo -e "${BLUE}========================================${NC}"
+    local text="$1"
+    local length=${#text}
+    local min_length=40
+    local bar_length=$((length > min_length ? length : min_length))
+    local separator=$(printf '=%.0s' $(seq 1 $bar_length))
+    echo -e "${BLUE}${separator}${NC}"
+    echo -e "${BLUE}$text${NC}"
+    echo -e "${BLUE}${separator}${NC}"
 }
 
 print_success() {
@@ -101,6 +106,13 @@ sudo apt-get install -y \
 print_success "Build tools installed"
 echo ""
 
+# Navigate to project directory (needed for later steps)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
+print_info "Project directory: $PROJECT_DIR"
+echo ""
+
 # Install rbenv and ruby-build
 print_header "Step 3: Installing rbenv"
 print_info "Installing rbenv for Ruby version management..."
@@ -129,6 +141,48 @@ eval "$(rbenv init -)"
 
 echo ""
 
+# Optimize for low-RAM devices (like Pi Zero 2W with 512MB RAM)
+print_header "Step 3.5: Optimizing for Low-RAM Devices"
+TOTAL_RAM=$(free -m | awk '/^Mem:/{print $2}')
+print_info "Detected RAM: ${TOTAL_RAM}MB"
+
+if [ "$TOTAL_RAM" -lt 1024 ]; then
+    print_warning "Low RAM detected. Optimizing for 512MB devices..."
+
+    # Check current swap
+    SWAP_SIZE=$(free -m | awk '/^Swap:/{print $2}')
+    print_info "Current swap: ${SWAP_SIZE}MB"
+
+    # Increase swap if needed (to prevent OOM during Ruby compilation)
+    if [ "$SWAP_SIZE" -lt 1024 ]; then
+        print_info "Increasing swap space to 1GB for Ruby compilation..."
+
+        # Stop swap
+        sudo dphys-swapfile swapoff || true
+
+        # Configure new swap size
+        sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
+
+        # Recreate and enable swap
+        sudo dphys-swapfile setup
+        sudo dphys-swapfile swapon
+
+        NEW_SWAP=$(free -m | awk '/^Swap:/{print $2}')
+        print_success "Swap increased to ${NEW_SWAP}MB"
+    fi
+
+    # Limit parallel make jobs to 1 to prevent OOM
+    export MAKE_OPTS="-j1"
+    print_info "Ruby compilation will use single-threaded build (MAKE_OPTS=-j1)"
+    print_warning "This will be slower but prevents system freezes"
+else
+    # For devices with more RAM, use 2 parallel jobs for faster compilation
+    export MAKE_OPTS="-j2"
+    print_info "Ruby compilation will use 2 parallel jobs"
+fi
+print_success "System optimized for Ruby compilation"
+echo ""
+
 # Install Ruby version from .ruby-version
 print_header "Step 4: Installing Ruby"
 print_info "Installing Ruby version from .ruby-version file..."
@@ -141,7 +195,9 @@ if [ -f "$PROJECT_DIR/.ruby-version" ]; then
     if rbenv versions | grep -q "$RUBY_VERSION"; then
         print_warning "Ruby $RUBY_VERSION already installed"
     else
-        print_info "Installing Ruby $RUBY_VERSION (this may take 10-20 minutes on Pi Zero 2W)..."
+        print_info "Installing Ruby $RUBY_VERSION..."
+        print_warning "This may take 20-40 minutes on Pi Zero 2W with limited RAM"
+        print_info "The system may appear slow during compilation - this is normal"
         rbenv install "$RUBY_VERSION"
         print_success "Ruby $RUBY_VERSION installed"
     fi
@@ -172,13 +228,6 @@ print_header "Step 6: Installing Motion (Camera Streaming)"
 print_info "Installing Motion and video utilities..."
 sudo apt-get install -y motion v4l-utils
 print_success "Motion installed"
-echo ""
-
-# Navigate to project directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_DIR"
-print_info "Project directory: $PROJECT_DIR"
 echo ""
 
 # Install Ruby gems
