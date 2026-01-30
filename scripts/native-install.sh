@@ -159,6 +159,19 @@ if [ "$TOTAL_RAM" -lt 1024 ]; then
     print_info "Ruby compilation will use single-threaded build (MAKE_OPTS=-j1)"
     print_info "This prevents memory exhaustion and system freezes"
     print_warning "Compilation will take 30-60 minutes - this is normal"
+
+    # Check /tmp space availability
+    TMP_AVAIL=$(df /tmp | awk 'NR==2 {print $4}')
+    print_info "/tmp available space: $(df -h /tmp | awk 'NR==2 {print $4}')"
+
+    # Use custom temp directory if /tmp is too small (< 500MB free)
+    if [ "$TMP_AVAIL" -lt 512000 ]; then
+        CUSTOM_TMPDIR="$HOME/.rbenv-tmp"
+        mkdir -p "$CUSTOM_TMPDIR"
+        export TMPDIR="$CUSTOM_TMPDIR"
+        print_warning "/tmp has limited space, using $CUSTOM_TMPDIR for compilation"
+        print_info "This directory will be cleaned up after installation"
+    fi
 else
     # For devices with more RAM, use parallel jobs for faster compilation
     export MAKE_OPTS="-j2"
@@ -192,6 +205,14 @@ if [ -f "$PROJECT_DIR/.ruby-version" ]; then
 
     INSTALLED_VERSION=$(ruby --version)
     print_success "Ruby active: $INSTALLED_VERSION"
+
+    # Clean up custom temp directory if it was used
+    if [ -n "$CUSTOM_TMPDIR" ] && [ -d "$CUSTOM_TMPDIR" ]; then
+        print_info "Cleaning up temporary compilation directory..."
+        rm -rf "$CUSTOM_TMPDIR"
+        unset TMPDIR
+        print_success "Temporary files cleaned up"
+    fi
 else
     print_error ".ruby-version file not found in $PROJECT_DIR"
     exit 1
