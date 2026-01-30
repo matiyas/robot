@@ -70,14 +70,15 @@ class RobotApp < Sinatra::Base
     set :logger, logger
 
     # Initialize controller based on configuration
-    controller = if config['gpio_enabled']
-                   logger.info 'Initializing GPIO controller'
-                   gpio_manager = GpioManager.new(File.join(__dir__, '..', 'config', 'gpio_pins.yml'), logger)
-                   GpioController.new(gpio_manager, logger)
-                 else
-                   logger.info 'Initializing Mock controller (GPIO disabled)'
-                   MockController.new(logger)
-                 end
+    controller =
+      if config['gpio_enabled']
+        logger.info 'Initializing GPIO controller'
+        gpio_manager = GpioManager.new(File.join(__dir__, '..', 'config', 'gpio_pins.yml'), logger)
+        GpioController.new(gpio_manager, logger)
+      else
+        logger.info 'Initializing Mock controller (GPIO disabled)'
+        MockController.new(logger)
+      end
 
     # Initialize robot
     robot = Robot.new(controller, config, logger)
@@ -293,9 +294,7 @@ class RobotApp < Sinatra::Base
   #
   # @return [String] JSON response with camera stream URL
   get '/api/v1/camera' do
-    success_response({
-                       stream_url: settings.app_settings['camera_url']
-                     })
+    success_response(stream_url: settings.app_settings['camera_url'])
   end
 
   # Health check endpoint for monitoring
@@ -313,7 +312,7 @@ class RobotApp < Sinatra::Base
   #
   # @return [String] JSON response with health status
   get '/health' do
-    json_response({ status: 'ok', timestamp: Time.now.to_i })
+    json_response(status: 'ok', timestamp: Time.now.to_i)
   end
 
   # Start the server if this file is executed directly

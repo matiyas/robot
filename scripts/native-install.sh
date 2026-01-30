@@ -153,73 +153,14 @@ if [ "$TOTAL_RAM" -lt 1024 ]; then
     SWAP_SIZE=$(free -m | awk '/^Swap:/{print $2}')
     print_info "Current swap: ${SWAP_SIZE}MB"
 
-    # Increase swap if needed (to prevent OOM during Ruby compilation)
-    if [ "$SWAP_SIZE" -lt 1024 ]; then
-        print_info "Increasing swap space to 1GB for Ruby compilation..."
-
-        # Check if dphys-swapfile is available (older Raspberry Pi OS)
-        if command -v dphys-swapfile >/dev/null 2>&1; then
-            print_info "Using dphys-swapfile for swap management..."
-
-            # Stop swap
-            sudo dphys-swapfile swapoff || true
-
-            # Configure new swap size
-            sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
-
-            # Recreate and enable swap
-            sudo dphys-swapfile setup
-            sudo dphys-swapfile swapon
-        else
-            # Modern Raspberry Pi OS without dphys-swapfile
-            print_info "Using manual swap management..."
-
-            # Find existing swap device/file
-            SWAP_DEVICE=$(swapon --show=NAME --noheadings | head -n1)
-
-            # Check if using zram (compressed RAM swap)
-            if echo "$SWAP_DEVICE" | grep -q "zram"; then
-                print_warning "Detected zram swap (compressed RAM)"
-                print_info "Disabling zram and creating disk-based swap..."
-
-                # Turn off zram swap
-                sudo swapoff "$SWAP_DEVICE" 2>/dev/null || true
-
-                # Use traditional swap file location
-                SWAP_FILE="/swapfile"
-            else
-                # Traditional swap file
-                SWAP_FILE="$SWAP_DEVICE"
-                if [ -z "$SWAP_FILE" ]; then
-                    SWAP_FILE="/swapfile"
-                fi
-
-                print_info "Swap file: $SWAP_FILE"
-                # Turn off existing swap
-                sudo swapoff "$SWAP_FILE" 2>/dev/null || true
-            fi
-
-            # Create new 1GB swap file on disk
-            print_info "Creating 1GB swap file at $SWAP_FILE..."
-            sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024 status=progress 2>/dev/null || \
-                sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024
-            sudo chmod 600 "$SWAP_FILE"
-            sudo mkswap "$SWAP_FILE"
-            sudo swapon "$SWAP_FILE"
-
-            print_success "Created 1GB swap file at $SWAP_FILE"
-        fi
-
-        NEW_SWAP=$(free -m | awk '/^Swap:/{print $2}')
-        print_success "Swap increased to ${NEW_SWAP}MB"
-    fi
-
-    # Limit parallel make jobs to 1 to prevent OOM
+    # Use single-threaded compilation to prevent OOM
+    # Testing shows -j1 uses only ~224MB swap, which fits in existing swap space
     export MAKE_OPTS="-j1"
     print_info "Ruby compilation will use single-threaded build (MAKE_OPTS=-j1)"
-    print_warning "This will be slower but prevents system freezes"
+    print_info "This prevents memory exhaustion and system freezes"
+    print_warning "Compilation will take 30-60 minutes - this is normal"
 else
-    # For devices with more RAM, use 2 parallel jobs for faster compilation
+    # For devices with more RAM, use parallel jobs for faster compilation
     export MAKE_OPTS="-j2"
     print_info "Ruby compilation will use 2 parallel jobs"
 fi

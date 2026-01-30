@@ -5,15 +5,13 @@ default: &default
   turret_timeout: 2000    # milliseconds
   log_level: 'info'
   auth_enabled: false
+  camera_url: 'http://localhost:8081/stream'
 
 development:
   <<: *default
   gpio_enabled: false  # Use MockController in development
-  camera_url: 'http://localhost:8081/stream'
   log_level: 'debug'
 
 production:
   <<: *default
-  port: 80
   gpio_enabled: true
-  camera_url: 'http://localhost:8081/stream'
