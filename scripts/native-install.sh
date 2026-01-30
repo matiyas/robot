@@ -142,7 +142,7 @@ eval "$(rbenv init -)"
 echo ""
 
 # Optimize for low-RAM devices (like Pi Zero 2W with 512MB RAM)
-print_header "Step 3.5: Optimizing for Low-RAM Devices"
+print_header "Step 4: Optimizing for Low-RAM Devices"
 TOTAL_RAM=$(free -m | awk '/^Mem:/{print $2}')
 print_info "Detected RAM: ${TOTAL_RAM}MB"
 
@@ -157,15 +157,43 @@ if [ "$TOTAL_RAM" -lt 1024 ]; then
     if [ "$SWAP_SIZE" -lt 1024 ]; then
         print_info "Increasing swap space to 1GB for Ruby compilation..."
 
-        # Stop swap
-        sudo dphys-swapfile swapoff || true
+        # Check if dphys-swapfile is available (older Raspberry Pi OS)
+        if command -v dphys-swapfile >/dev/null 2>&1; then
+            print_info "Using dphys-swapfile for swap management..."
 
-        # Configure new swap size
-        sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
+            # Stop swap
+            sudo dphys-swapfile swapoff || true
 
-        # Recreate and enable swap
-        sudo dphys-swapfile setup
-        sudo dphys-swapfile swapon
+            # Configure new swap size
+            sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
+
+            # Recreate and enable swap
+            sudo dphys-swapfile setup
+            sudo dphys-swapfile swapon
+        else
+            # Modern Raspberry Pi OS without dphys-swapfile
+            print_info "Using manual swap management..."
+
+            # Find existing swap file
+            SWAP_FILE=$(swapon --show=NAME --noheadings | head -n1)
+            if [ -z "$SWAP_FILE" ]; then
+                SWAP_FILE="/swapfile"
+            fi
+
+            print_info "Swap file: $SWAP_FILE"
+
+            # Turn off existing swap
+            sudo swapoff "$SWAP_FILE" 2>/dev/null || true
+
+            # Create new 1GB swap file
+            sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024 status=progress 2>/dev/null || \
+                sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024
+            sudo chmod 600 "$SWAP_FILE"
+            sudo mkswap "$SWAP_FILE"
+            sudo swapon "$SWAP_FILE"
+
+            print_success "Created 1GB swap file at $SWAP_FILE"
+        fi
 
         NEW_SWAP=$(free -m | awk '/^Swap:/{print $2}')
         print_success "Swap increased to ${NEW_SWAP}MB"
@@ -184,7 +212,7 @@ print_success "System optimized for Ruby compilation"
 echo ""
 
 # Install Ruby version from .ruby-version
-print_header "Step 4: Installing Ruby"
+print_header "Step 5: Installing Ruby"
 print_info "Installing Ruby version from .ruby-version file..."
 
 if [ -f "$PROJECT_DIR/.ruby-version" ]; then
@@ -215,7 +243,7 @@ fi
 echo ""
 
 # Install Bundler
-print_header "Step 5: Installing Bundler"
+print_header "Step 6: Installing Bundler"
 print_info "Installing Ruby Bundler for dependency management..."
 gem install bundler
 rbenv rehash
@@ -224,14 +252,14 @@ print_success "Bundler installed: $BUNDLER_VERSION"
 echo ""
 
 # Install Motion for camera streaming
-print_header "Step 6: Installing Motion (Camera Streaming)"
+print_header "Step 7: Installing Motion (Camera Streaming)"
 print_info "Installing Motion and video utilities..."
 sudo apt-get install -y motion v4l-utils
 print_success "Motion installed"
 echo ""
 
 # Install Ruby gems
-print_header "Step 7: Installing Ruby Dependencies"
+print_header "Step 8: Installing Ruby Dependencies"
 print_info "This will install all required Ruby gems..."
 print_info "This may take 5-10 minutes on Raspberry Pi Zero 2W..."
 
@@ -248,7 +276,7 @@ fi
 echo ""
 
 # Configure camera
-print_header "Step 8: Configuring Camera"
+print_header "Step 9: Configuring Camera"
 print_info "Enabling camera interface..."
 
 # For newer Raspberry Pi OS (Bookworm+)
@@ -278,7 +306,7 @@ print_success "Camera configuration updated"
 echo ""
 
 # Configure Motion
-print_header "Step 9: Configuring Motion Daemon"
+print_header "Step 10: Configuring Motion Daemon"
 if [ -f scripts/motion.conf ]; then
     print_info "Copying Motion configuration..."
     sudo cp scripts/motion.conf /etc/motion/motion.conf
@@ -295,7 +323,7 @@ fi
 echo ""
 
 # Setup systemd service
-print_header "Step 10: Installing Systemd Service"
+print_header "Step 11: Installing Systemd Service"
 if [ -f scripts/robot.service ]; then
     print_info "Installing robot control service..."
 
@@ -312,7 +340,7 @@ fi
 echo ""
 
 # Set permissions
-print_header "Step 11: Setting User Permissions"
+print_header "Step 12: Setting User Permissions"
 print_info "Adding user to required groups..."
 
 # Add to video group for camera access
@@ -335,7 +363,7 @@ print_warning "You may need to log out and back in for group changes to take eff
 echo ""
 
 # Enable services
-print_header "Step 12: Configuring Services"
+print_header "Step 13: Configuring Services"
 read -p "Enable Motion service to start on boot? (Y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
