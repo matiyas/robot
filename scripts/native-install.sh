@@ -146,19 +146,59 @@ print_header "Step 4: Optimizing for Low-RAM Devices"
 TOTAL_RAM=$(free -m | awk '/^Mem:/{print $2}')
 print_info "Detected RAM: ${TOTAL_RAM}MB"
 
-if [ "$TOTAL_RAM" -lt 1024 ]; then
-    print_warning "Low RAM detected. Optimizing for 512MB devices..."
+if [ "$TOTAL_RAM" -lt 512 ]; then
+    print_warning "Low RAM detected (${TOTAL_RAM}MB). Optimizing for devices with <512MB RAM..."
 
     # Check current swap
     SWAP_SIZE=$(free -m | awk '/^Swap:/{print $2}')
     print_info "Current swap: ${SWAP_SIZE}MB"
 
-    # Use single-threaded compilation to prevent OOM
-    # Testing shows -j1 uses only ~224MB swap, which fits in existing swap space
-    export MAKE_OPTS="-j1"
-    print_info "Ruby compilation will use single-threaded build (MAKE_OPTS=-j1)"
-    print_info "This prevents memory exhaustion and system freezes"
-    print_warning "Compilation will take 30-60 minutes - this is normal"
+    # For very low RAM devices, increase swap for parallel compilation
+    if [ "$SWAP_SIZE" -lt 1024 ]; then
+        print_info "Increasing swap space to 1GB for 4-thread compilation..."
+
+        # Detect swap type
+        SWAP_DEVICE=$(swapon --show=NAME --noheadings | head -n1)
+
+        # Check if using zram (compressed RAM swap)
+        if echo "$SWAP_DEVICE" | grep -q "zram"; then
+            print_warning "Detected zram swap - disabling and creating disk-based swap"
+
+            # Turn off zram
+            sudo swapoff "$SWAP_DEVICE" 2>/dev/null || true
+
+            # Disable zram service if it exists
+            if systemctl is-enabled zram-swap-config.service >/dev/null 2>&1; then
+                sudo systemctl disable zram-swap-config.service
+            fi
+        elif [ -n "$SWAP_DEVICE" ]; then
+            # Turn off existing swap
+            sudo swapoff "$SWAP_DEVICE" 2>/dev/null || true
+        fi
+
+        # Create new 1GB swap file on SD card
+        SWAP_FILE="/swapfile"
+        print_info "Creating 1GB swap file at $SWAP_FILE..."
+        sudo rm -f "$SWAP_FILE"
+        sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024 status=progress 2>/dev/null || \
+            sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024
+        sudo chmod 600 "$SWAP_FILE"
+        sudo mkswap "$SWAP_FILE"
+        sudo swapon "$SWAP_FILE"
+
+        # Make it permanent
+        if ! grep -q "^$SWAP_FILE" /etc/fstab 2>/dev/null; then
+            echo "$SWAP_FILE none swap sw 0 0" | sudo tee -a /etc/fstab > /dev/null
+        fi
+
+        NEW_SWAP=$(free -m | awk '/^Swap:/{print $2}')
+        print_success "Swap increased to ${NEW_SWAP}MB"
+    fi
+
+    # Use 4-thread compilation for better performance with adequate swap
+    export MAKE_OPTS="-j4"
+    print_info "Ruby compilation will use 4 parallel jobs (MAKE_OPTS=-j4)"
+    print_warning "Compilation will take 15-25 minutes with adequate swap"
 
     # Check /tmp space availability
     TMP_AVAIL=$(df /tmp | awk 'NR==2 {print $4}')
@@ -174,8 +214,8 @@ if [ "$TOTAL_RAM" -lt 1024 ]; then
     fi
 else
     # For devices with more RAM, use parallel jobs for faster compilation
-    export MAKE_OPTS="-j2"
-    print_info "Ruby compilation will use 2 parallel jobs"
+    export MAKE_OPTS="-j4"
+    print_info "Ruby compilation will use 4 parallel jobs"
 fi
 print_success "System optimized for Ruby compilation"
 echo ""

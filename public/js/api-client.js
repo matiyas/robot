@@ -26,13 +26,14 @@ class RobotAPI {
 
   async post(endpoint, data) {
     try {
-      const response = await fetch(this.baseUrl + endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const response =
+        await fetch(this.baseUrl + endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
 
       if (!response.ok) {
         const error = await response.json();
@@ -48,12 +49,13 @@ class RobotAPI {
 
   async get(endpoint) {
     try {
-      const response = await fetch(this.baseUrl + endpoint, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response =
+        await fetch(this.baseUrl + endpoint, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
       if (!response.ok) {
         const error = await response.json();

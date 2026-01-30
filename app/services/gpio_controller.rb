@@ -219,12 +219,13 @@ class GpioController < ControlInterface
   # @api private
   def auto_stop_after(duration_ms)
     cancel_auto_stop
-    @movement_thread = Thread.new do
-      sleep(duration_ms / 1000.0)
-      stop_motors
-      @logger.debug "Auto-stop triggered after #{duration_ms}ms"
-      @movement_thread = nil
-    end
+    @movement_thread =
+      Thread.new do
+        sleep(duration_ms / 1000.0)
+        stop_motors
+        @logger.debug "Auto-stop triggered after #{duration_ms}ms"
+        @movement_thread = nil
+      end
   end
 
   # Cancels the current auto-stop timer if one exists

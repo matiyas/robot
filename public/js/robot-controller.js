@@ -44,20 +44,13 @@ class RobotController {
     const btnLeft = document.getElementById('btnTurretLeft');
     const btnRight = document.getElementById('btnTurretRight');
 
-    if (btnLeft) {
-      this.setupButton(btnLeft, () => this.turret('left'));
-    }
-
-    if (btnRight) {
-      this.setupButton(btnRight, () => this.turret('right'));
-    }
+    if (btnLeft) this.setupButton(btnLeft, () => this.turret('left'));
+    if (btnRight) this.setupButton(btnRight, () => this.turret('right'));
   }
 
   setupEmergencyStop() {
     const btnStop = document.getElementById('btnStop');
-    if (btnStop) {
-      btnStop.addEventListener('click', () => this.emergencyStop());
-    }
+    if (btnStop) btnStop.addEventListener('click', () => this.emergencyStop());
   }
 
   setupButton(button, action) {
@@ -65,7 +58,7 @@ class RobotController {
     let pressTimer = null;
     let isPressed = false;
 
-    const startPress = (e) => {
+    const startPress = e => {
       e.preventDefault();
       if (isPressed) return;
 
@@ -78,7 +71,7 @@ class RobotController {
       console.log(`Button pressed: ${button.id}`);
     };
 
-    const endPress = (e) => {
+    const endPress = e => {
       if (!isPressed) return;
 
       isPressed = false;

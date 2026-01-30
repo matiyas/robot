@@ -12,8 +12,7 @@ require_relative 'control_interface'
 # - CI/CD pipeline testing
 #
 # Instead of controlling GPIO pins, this controller logs all actions to
-# the logger with emoji indicators for easy visual identification. It simulates
-# the timing behavior of real movements using background threads.
+# the logger. It simulates the timing behavior of real movements using background threads.
 #
 # The MockController is automatically used when gpio_enabled is false in
 # the settings configuration.
