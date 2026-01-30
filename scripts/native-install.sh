@@ -174,18 +174,33 @@ if [ "$TOTAL_RAM" -lt 1024 ]; then
             # Modern Raspberry Pi OS without dphys-swapfile
             print_info "Using manual swap management..."
 
-            # Find existing swap file
-            SWAP_FILE=$(swapon --show=NAME --noheadings | head -n1)
-            if [ -z "$SWAP_FILE" ]; then
+            # Find existing swap device/file
+            SWAP_DEVICE=$(swapon --show=NAME --noheadings | head -n1)
+
+            # Check if using zram (compressed RAM swap)
+            if echo "$SWAP_DEVICE" | grep -q "zram"; then
+                print_warning "Detected zram swap (compressed RAM)"
+                print_info "Disabling zram and creating disk-based swap..."
+
+                # Turn off zram swap
+                sudo swapoff "$SWAP_DEVICE" 2>/dev/null || true
+
+                # Use traditional swap file location
                 SWAP_FILE="/swapfile"
+            else
+                # Traditional swap file
+                SWAP_FILE="$SWAP_DEVICE"
+                if [ -z "$SWAP_FILE" ]; then
+                    SWAP_FILE="/swapfile"
+                fi
+
+                print_info "Swap file: $SWAP_FILE"
+                # Turn off existing swap
+                sudo swapoff "$SWAP_FILE" 2>/dev/null || true
             fi
 
-            print_info "Swap file: $SWAP_FILE"
-
-            # Turn off existing swap
-            sudo swapoff "$SWAP_FILE" 2>/dev/null || true
-
-            # Create new 1GB swap file
+            # Create new 1GB swap file on disk
+            print_info "Creating 1GB swap file at $SWAP_FILE..."
             sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024 status=progress 2>/dev/null || \
                 sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=1024
             sudo chmod 600 "$SWAP_FILE"
