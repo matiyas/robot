@@ -1,0 +1,53 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Documentation
+README.md
+*.md
+
+# Development files
+.bundle
+.claude
+vendor/bundle
+
+# Test and coverage files
+spec/
+coverage/
+.rspec
+spec_helper.rb
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ruby/Bundler
+# .ruby-version - NEEDED for Docker build to determine Ruby version
+.ruby-gemset
+
+# Development tools
+.rubocop.yml
+
+# Scripts that are for Raspberry Pi installation
+scripts/setup.sh
+scripts/robot.service
+
+# Test fixtures and examples
+spec/examples.txt

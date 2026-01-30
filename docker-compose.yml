@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  robot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: robot-tank:latest
+    container_name: robot-tank
+
+    # For development mode (no GPIO access)
+    environment:
+      - RACK_ENV=development
+
+    # For production mode on Raspberry Pi (uncomment below)
+    # environment:
+    #   - RACK_ENV=production
+
+    ports:
+      - "4567:4567"  # Development port
+      - "80:80"      # Production port
+      - "8081:8081"  # Motion camera stream
+
+    volumes:
+      # Mount configuration files
+      - ./config:/app/config:ro
+      # Mount logs directory (optional)
+      - ./logs:/app/logs
+
+    # For GPIO access on Raspberry Pi (uncomment for production)
+    # privileged: true
+    # devices:
+    #   - /dev/gpiomem:/dev/gpiomem
+    #   - /dev/mem:/dev/mem
+    #   - /dev/video0:/dev/video0  # Camera device
+
+    restart: unless-stopped
+
+    # Resource limits (adjust based on your Raspberry Pi)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4567/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Motion service for camera streaming (optional, if not using system Motion)
+  # motion:
+  #   image: motion/motion:latest
+  #   container_name: robot-motion
+  #   ports:
+  #     - "8081:8081"
+  #   devices:
+  #     - /dev/video0:/dev/video0
+  #   volumes:
+  #     - ./scripts/motion.conf:/etc/motion/motion.conf:ro
+  #   restart: unless-stopped

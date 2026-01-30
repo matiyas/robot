@@ -1,0 +1,57 @@
+version: '3.8'
+
+# Production docker-compose configuration for Raspberry Pi
+# This file includes GPIO and camera device access
+
+services:
+  robot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: robot-tank:latest
+    container_name: robot-tank-prod
+
+    environment:
+      - RACK_ENV=production
+
+    ports:
+      - "80:80"      # Production port
+      - "8081:8081"  # Motion camera stream
+
+    volumes:
+      # Mount configuration files
+      - ./config:/app/config:ro
+      # Mount logs directory
+      - ./logs:/app/logs
+
+    # Enable GPIO access
+    privileged: true
+    devices:
+      - /dev/gpiomem:/dev/gpiomem
+      - /dev/mem:/dev/mem
+      - /dev/video0:/dev/video0  # Camera device
+
+    restart: unless-stopped
+
+    # Resource limits for Raspberry Pi Zero 2W
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    # Network mode for direct access
+    network_mode: host

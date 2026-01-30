@@ -1,0 +1,49 @@
+version: '3.8'
+
+# Development docker-compose configuration
+# This file is for testing without GPIO hardware
+
+services:
+  robot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: robot-tank:dev
+    container_name: robot-tank-dev
+
+    environment:
+      - RACK_ENV=development
+
+    ports:
+      - "4567:4567"  # Development port
+      - "8081:8081"  # Motion camera stream
+
+    volumes:
+      # Mount application code for development (live reload)
+      - ./app:/app/app
+      - ./lib:/app/lib
+      - ./config:/app/config
+      - ./views:/app/views
+      - ./public:/app/public
+      # Mount logs directory
+      - ./logs:/app/logs
+
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4567/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    # Use bridge network for development
+    networks:
+      - robot-dev
+
+networks:
+  robot-dev:
+    driver: bridge

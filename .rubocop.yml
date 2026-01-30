@@ -1,0 +1,98 @@
+require:
+  - rubocop-rspec
+  - rubocop-rspec_rails
+
+plugins:
+  - rubocop-performance
+  - rubocop-capybara
+  - rubocop-factory_bot
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+    - 'node_modules/**/*'
+
+# Use single quotes consistently
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+# Allow longer lines for readability
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'spec/**/*'
+
+# Documentation is good but not required for specs
+Style/Documentation:
+  Enabled: true
+  Exclude:
+    - 'spec/**/*'
+
+# Frozen string literal
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  Exclude:
+    - 'spec/**/*'
+
+# Spec specific
+RSpec/ExampleLength:
+  Max: 15
+
+RSpec/MultipleExpectations:
+  Max: 6
+
+RSpec/NestedGroups:
+  Max: 5
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10
+
+# Allow long describe blocks for API specs
+RSpec/DescribeClass:
+  Exclude:
+    - 'spec/app/robot_app_spec.rb'
+
+Metrics/BlockLength:
+  Max: 30
+  Exclude:
+    - 'spec/**/*'
+    - 'config/routes.rb'
+
+Metrics/ModuleLength:
+  Max: 150
+
+Metrics/MethodLength:
+  Max: 16
+
+Metrics/AbcSize:
+  Max: 20
+
+# Allow compact controller specs
+Metrics/ClassLength:
+  Max: 150
+
+# Disable RSpec style cops that require extensive test rewrites
+RSpec/MessageSpies:
+  Enabled: false
+
+RSpec/SubjectStub:
+  Enabled: false
+
+RSpec/StubbedMock:
+  Enabled: false
+
+RSpec/LetSetup:
+  Enabled: false
+
+# Disable RSpecRails cops for Sinatra apps using Rack::Test, not Rails
+RSpecRails/HttpStatus:
+  Exclude:
+    - 'spec/**/*'
+
+RSpecRails/HaveHttpStatus:
+  Exclude:
+    - 'spec/**/*'

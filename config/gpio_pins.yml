@@ -1,0 +1,23 @@
+# GPIO Pin Mapping (BCM numbering)
+# Hardware: 2x DRV8833 motor drivers, 3x 3V brush motors class 130
+
+motor_left:
+  in1: 17  # Forward direction
+  in2: 18  # Backward direction
+  enable: 12  # Future: PWM speed control (hardware PWM capable)
+
+motor_right:
+  in1: 22  # Forward direction
+  in2: 23  # Backward direction
+  enable: 13  # Future: PWM speed control (hardware PWM capable)
+
+motor_turret:
+  in1: 27  # Left rotation
+  in2: 24  # Right rotation
+  enable: 19  # Future: PWM speed control (hardware PWM capable)
+
+# DRV8833 Truth Table (per motor):
+# IN1=LOW,  IN2=LOW   -> Coast (motor off)
+# IN1=LOW,  IN2=HIGH  -> Backward/CCW
+# IN1=HIGH, IN2=LOW   -> Forward/CW
+# IN1=HIGH, IN2=HIGH  -> Brake

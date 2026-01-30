@@ -1,0 +1,43 @@
+version: '3.8'
+
+# docker-compose.override.yml.example
+# Copy this file to docker-compose.override.yml and customize as needed
+# This file will be automatically loaded by docker-compose
+
+services:
+  robot:
+    # Override environment variables
+    environment:
+      - RACK_ENV=development
+      # - LOG_LEVEL=debug
+      # - PORT=4567
+
+    # Override ports
+    # ports:
+    #   - "8080:4567"
+
+    # Add additional volumes
+    # volumes:
+    #   - ./custom-config.yml:/app/config/settings.yml:ro
+
+    # Override resource limits
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+
+    # Add labels for monitoring/management
+    # labels:
+    #   - "com.example.description=Robot Tank Controller"
+    #   - "com.example.version=1.0"
+
+    # Override network settings
+    # network_mode: bridge
+    # networks:
+    #   - custom-network
+
+# Define custom networks if needed
+# networks:
+#   custom-network:
+#     driver: bridge
