@@ -193,6 +193,8 @@ if [ "$TOTAL_RAM" -lt 512 ]; then
 
         NEW_SWAP=$(free -m | awk '/^Swap:/{print $2}')
         print_success "Swap increased to ${NEW_SWAP}MB"
+    else
+        print_success "Swap is already adequate (${SWAP_SIZE}MB >= 1024MB)"
     fi
 
     # Use 4-thread compilation for better performance with adequate swap
@@ -312,11 +314,6 @@ fi
 if ! sudo grep -q "^start_x=1" $BOOT_CONFIG; then
     echo "start_x=1" | sudo tee -a $BOOT_CONFIG > /dev/null
     print_success "Camera enabled in config"
-fi
-
-if ! sudo grep -q "^gpu_mem=128" $BOOT_CONFIG; then
-    echo "gpu_mem=128" | sudo tee -a $BOOT_CONFIG > /dev/null
-    print_success "GPU memory allocated"
 fi
 
 print_success "Camera configuration updated"
