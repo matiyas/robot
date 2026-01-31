@@ -407,8 +407,11 @@ if [ -f scripts/rpicam-stream.service ]; then
         print_info "MJPEG server script made executable"
     fi
 
-    # Update user and project directory in service file (keep Group=video for camera access)
-    sed -e "s|User=pi|User=$USER|g" -e "s|PROJECT_DIR|$PROJECT_DIR|g" scripts/rpicam-stream.service | \
+    # Update user, project directory, and rbenv path in service file (keep Group=video for camera access)
+    sed -e "s|User=pi|User=$USER|g" \
+        -e "s|PROJECT_DIR|$PROJECT_DIR|g" \
+        -e "s|RBENV_SHIMS|$HOME/.rbenv/shims|g" \
+        scripts/rpicam-stream.service | \
         sudo tee /etc/systemd/system/rpicam-stream.service > /dev/null
 
     sudo systemctl daemon-reload

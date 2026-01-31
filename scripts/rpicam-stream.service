@@ -9,19 +9,11 @@ User=pi
 Group=video
 WorkingDirectory=/tmp
 
-# Stream camera using rpicam-vid piped to Ruby MJPEG HTTP server
-# rpicam-vid outputs MJPEG to stdout, Ruby server handles HTTP multipart streaming on port 8081
-ExecStart=/bin/bash -c '/usr/bin/rpicam-vid \
-    --inline \
-    --nopreview \
-    --timeout 0 \
-    --width 640 \
-    --height 480 \
-    --framerate 15 \
-    --codec mjpeg \
-    --quality 85 \
-    -o - | \
-    PROJECT_DIR/scripts/mjpeg-server.rb'
+# Stream camera using rpicam-vid via named pipe to Ruby MJPEG HTTP server
+# rpicam-vid starts first in background, then Ruby server opens FIFO for reading
+ExecStartPre=/bin/bash -c 'rm -f /tmp/camera_stream && mkfifo /tmp/camera_stream'
+ExecStart=/bin/bash -c '/usr/bin/rpicam-vid --inline --nopreview --timeout 0 --width 640 --height 480 --framerate 15 --codec mjpeg --quality 85 -o /tmp/camera_stream & sleep 2 && RBENV_SHIMS/ruby PROJECT_DIR/scripts/mjpeg-server.rb /tmp/camera_stream'
+ExecStopPost=/bin/rm -f /tmp/camera_stream
 
 # Restart policy
 Restart=always
