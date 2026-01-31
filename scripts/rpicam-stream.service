@@ -9,8 +9,8 @@ User=pi
 Group=video
 WorkingDirectory=/tmp
 
-# Stream camera feed using rpicam-vid with libav output
-# Streams to HTTP on port 8081
+# Stream camera using rpicam-vid
+# Output TCP stream on port 8082, then ffmpeg converts to HTTP on port 8081
 ExecStart=/usr/bin/rpicam-vid \
     --inline \
     --nopreview \
@@ -21,7 +21,7 @@ ExecStart=/usr/bin/rpicam-vid \
     --codec mjpeg \
     --quality 85 \
     --listen \
-    -o tcp://0.0.0.0:8081
+    -o tcp://0.0.0.0:8082
 
 # Restart policy
 Restart=always

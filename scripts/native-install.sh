@@ -399,17 +399,31 @@ echo ""
 # Configure rpicam streaming service
 print_header "Step 11: Configuring rpicam Streaming Service"
 if [ -f scripts/rpicam-stream.service ]; then
-    print_info "Installing rpicam streaming service..."
+    print_info "Installing rpicam streaming service (TCP stream)..."
 
     # Update user in service file (keep Group=video for camera access)
     sed "s|User=pi|User=$USER|g" scripts/rpicam-stream.service | \
         sudo tee /etc/systemd/system/rpicam-stream.service > /dev/null
 
-    sudo systemctl daemon-reload
     print_success "rpicam streaming service installed"
 else
     print_warning "rpicam service file not found, skipping"
 fi
+
+# Install camera HTTP converter service
+if [ -f scripts/camera-http.service ]; then
+    print_info "Installing camera HTTP streaming service (TCP to HTTP)..."
+
+    # Update user in service file
+    sed "s|User=pi|User=$USER|g" scripts/camera-http.service | \
+        sudo tee /etc/systemd/system/camera-http.service > /dev/null
+
+    print_success "camera-http service installed"
+else
+    print_warning "camera-http service file not found, skipping"
+fi
+
+sudo systemctl daemon-reload
 echo ""
 
 # Setup systemd service
@@ -466,6 +480,15 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     print_success "rpicam streaming service enabled"
 else
     print_info "rpicam streaming service not enabled"
+fi
+
+read -p "Enable camera HTTP service to start on boot? (Y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    sudo systemctl enable camera-http
+    print_success "camera HTTP service enabled"
+else
+    print_info "camera HTTP service not enabled"
 fi
 
 read -p "Enable Robot service to start on boot? (Y/n) " -n 1 -r

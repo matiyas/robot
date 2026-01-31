@@ -1,0 +1,38 @@
+[Unit]
+Description=Camera HTTP MJPEG Streaming Service
+Documentation=https://ffmpeg.org/
+After=network.target rpicam-stream.service
+Requires=rpicam-stream.service
+
+[Service]
+Type=simple
+User=pi
+Group=video
+WorkingDirectory=/tmp
+
+# Convert TCP stream from rpicam-vid to HTTP MJPEG for browser compatibility
+# Input: TCP stream from rpicam-stream.service on port 8082
+# Output: HTTP MJPEG on port 8081
+ExecStart=/usr/bin/ffmpeg \
+    -f mjpeg \
+    -i tcp://127.0.0.1:8082 \
+    -c:v copy \
+    -f mjpeg \
+    -listen 1 \
+    http://0.0.0.0:8081
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+# Resource limits
+MemoryLimit=100M
+CPUQuota=40%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=camera-http
+
+[Install]
+WantedBy=multi-user.target
