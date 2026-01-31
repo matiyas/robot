@@ -9,9 +9,9 @@ User=pi
 Group=video
 WorkingDirectory=/tmp
 
-# Stream camera using rpicam-vid
-# Output TCP stream on port 8082, then ffmpeg converts to HTTP on port 8081
-ExecStart=/usr/bin/rpicam-vid \
+# Stream camera using rpicam-vid piped to ffmpeg for HTTP MJPEG
+# rpicam-vid outputs to stdout, ffmpeg serves HTTP multipart MJPEG on port 8081
+ExecStart=/bin/bash -c '/usr/bin/rpicam-vid \
     --inline \
     --nopreview \
     --timeout 0 \
@@ -20,16 +20,25 @@ ExecStart=/usr/bin/rpicam-vid \
     --framerate 15 \
     --codec mjpeg \
     --quality 85 \
-    --listen \
-    -o tcp://0.0.0.0:8082
+    -o - | \
+    /usr/bin/ffmpeg \
+    -probesize 32 \
+    -analyzeduration 0 \
+    -fflags nobuffer \
+    -f mjpeg \
+    -i - \
+    -c:v copy \
+    -f mpjpeg \
+    -listen 1 \
+    http://0.0.0.0:8081'
 
 # Restart policy
 Restart=always
 RestartSec=5
 
 # Resource limits (important for Pi Zero 2W)
-MemoryLimit=150M
-CPUQuota=60%
+MemoryLimit=250M
+CPUQuota=100%
 
 # Logging
 StandardOutput=journal

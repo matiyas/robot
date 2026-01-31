@@ -116,7 +116,6 @@ echo ""
 echo "Checking Services..."
 check_service "robot"
 check_service "rpicam-stream"
-check_service "camera-http"
 check_service "pigpiod"
 
 echo ""
@@ -147,12 +146,6 @@ if [ -f /etc/systemd/system/rpicam-stream.service ]; then
     echo -e "${GREEN}✓${NC} rpicam-stream service file exists"
 else
     echo -e "${YELLOW}!${NC} rpicam-stream service file not found"
-fi
-
-if [ -f /etc/systemd/system/camera-http.service ]; then
-    echo -e "${GREEN}✓${NC} camera-http service file exists"
-else
-    echo -e "${YELLOW}!${NC} camera-http service file not found"
 fi
 
 if [ -f /etc/systemd/system/robot.service ]; then
