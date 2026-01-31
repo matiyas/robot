@@ -11,11 +11,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     GEM_HOME=/usr/local/bundle
 
 # Install system dependencies
+# Note: pigpio is not available in standard Debian repos, only in Raspberry Pi OS
+# For production deployment on Pi, use native-install.sh instead
 RUN apt-get update && apt-get install -y \
     build-essential \
     git \
     curl \
-    rpicam-apps \
     ffmpeg \
     libssl-dev \
     libreadline-dev \

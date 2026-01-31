@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
 require 'yaml'
-require 'pi_piper'
+require 'pigpio'
 
 # Manages GPIO pin initialization, configuration, and lifecycle
 #
 # This class handles all GPIO pin setup and teardown for the robot control
 # system. It reads pin assignments from a YAML configuration file and
-# initializes PiPiper Pin objects for controlling DRV8833 motor drivers.
+# initializes pigpio GPIO objects for controlling DRV8833 motor drivers.
 #
 # The GpioManager is responsible for:
 # - Loading pin configuration from YAML
-# - Creating Pin objects for all motors
+# - Creating GPIO objects for all motors
 # - Setting initial safe state (all pins LOW)
 # - Cleanup and reset on shutdown
 #
@@ -33,11 +33,11 @@ require 'pi_piper'
 # @example Initialize GPIO manager
 #   gpio_manager = GpioManager.new('config/gpio_pins.yml', logger)
 #   left_motor = gpio_manager.left_motor
-#   left_motor[:in1].on  # Set left motor IN1 pin HIGH
+#   left_motor[:in1].write(1)  # Set left motor IN1 pin HIGH
 #
 # @see GpioController Uses GpioManager to control motors
 class GpioManager
-  include PiPiper
+  include Pigpio::Constant
 
   # @!attribute [r] left_motor
   #   @return [Hash] Left motor pins with keys :in1 and :in2
@@ -61,17 +61,22 @@ class GpioManager
   #
   # @raise [Errno::ENOENT] If config file doesn't exist
   # @raise [Psych::SyntaxError] If YAML is malformed
+  # @raise [RuntimeError] If pigpio connection fails
   def initialize(config_path = 'config/gpio_pins.yml', logger = nil)
     @logger = logger || Logger.new($stdout)
     @config = YAML.load_file(config_path)
     @cleaned_up = false
+    @pi = Pigpio.new
+
+    raise 'Failed to connect to pigpio. Is pigpiod daemon running?' unless @pi.connect
+
     initialize_pins
     @logger.info 'GPIO pins initialized'
   end
 
   # Initializes all GPIO pins from configuration
   #
-  # Creates PiPiper Pin objects for all motors based on the loaded configuration.
+  # Creates pigpio GPIO objects for all motors based on the loaded configuration.
   # Each motor gets two output pins (IN1 and IN2) for controlling direction.
   # After initialization, all pins are reset to LOW.
   #
@@ -81,24 +86,37 @@ class GpioManager
   def initialize_pins
     # Initialize left motor pins
     @left_motor = {
-      in1: Pin.new(pin: @config['motor_left']['in1'], direction: :out),
-      in2: Pin.new(pin: @config['motor_left']['in2'], direction: :out)
+      in1: setup_output_pin(@config['motor_left']['in1']),
+      in2: setup_output_pin(@config['motor_left']['in2'])
     }
 
     # Initialize right motor pins
     @right_motor = {
-      in1: Pin.new(pin: @config['motor_right']['in1'], direction: :out),
-      in2: Pin.new(pin: @config['motor_right']['in2'], direction: :out)
+      in1: setup_output_pin(@config['motor_right']['in1']),
+      in2: setup_output_pin(@config['motor_right']['in2'])
     }
 
     # Initialize turret motor pins
     @turret_motor = {
-      in1: Pin.new(pin: @config['motor_turret']['in1'], direction: :out),
-      in2: Pin.new(pin: @config['motor_turret']['in2'], direction: :out)
+      in1: setup_output_pin(@config['motor_turret']['in1']),
+      in2: setup_output_pin(@config['motor_turret']['in2'])
     }
 
     # Set all pins to LOW (coast) initially
     reset_all_pins
+  end
+
+  # Sets up a GPIO pin as an output
+  #
+  # @param pin_number [Integer] BCM GPIO pin number
+  # @return [Pigpio::IF::GPIO] Configured GPIO object
+  #
+  # @api private
+  def setup_output_pin(pin_number)
+    pin = @pi.gpio(pin_number)
+    pin.mode = PI_OUTPUT
+    pin.pud = PI_PUD_OFF
+    pin
   end
 
   # Resets all GPIO pins to LOW (coast mode)
@@ -109,16 +127,16 @@ class GpioManager
   # @return [void]
   def reset_all_pins
     [@left_motor, @right_motor, @turret_motor].each do |motor|
-      motor[:in1].off
-      motor[:in2].off
+      motor[:in1].write(0)
+      motor[:in2].write(0)
     end
     @logger.debug 'All GPIO pins reset to LOW'
   end
 
   # Cleans up GPIO resources
   #
-  # Resets all pins to LOW and marks the manager as cleaned up to prevent
-  # redundant cleanup calls. This should be called before program exit.
+  # Resets all pins to LOW and disconnects from pigpio daemon. This should
+  # be called before program exit.
   #
   # @return [void]
   def cleanup
@@ -126,6 +144,7 @@ class GpioManager
 
     @logger.info 'Cleaning up GPIO pins'
     reset_all_pins
+    @pi.stop
     @cleaned_up = true
   end
 

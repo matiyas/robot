@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative 'control_interface'
-require 'pi_piper'
 
 # GPIO controller for DRV8833 dual H-bridge motor drivers
 #
@@ -38,8 +37,6 @@ require 'pi_piper'
 # @see ControlInterface Abstract base class
 # @see GpioManager GPIO pin initialization and lifecycle
 class GpioController < ControlInterface
-  include PiPiper
-
   # Initializes the GPIO controller
   #
   # @param gpio_manager [GpioManager] Initialized GPIO manager with configured pins
@@ -188,17 +185,17 @@ class GpioController < ControlInterface
   def set_motor_direction(motor, direction)
     case direction
     when :forward
-      motor[:in1].on
-      motor[:in2].off
+      motor[:in1].write(1)
+      motor[:in2].write(0)
     when :backward
-      motor[:in1].off
-      motor[:in2].on
+      motor[:in1].write(0)
+      motor[:in2].write(1)
     when :coast
-      motor[:in1].off
-      motor[:in2].off
+      motor[:in1].write(0)
+      motor[:in2].write(0)
     when :brake
-      motor[:in1].on
-      motor[:in2].on
+      motor[:in1].write(1)
+      motor[:in2].write(1)
     else
       raise ArgumentError, "Invalid direction: #{direction}"
     end

@@ -277,8 +277,18 @@ sudo apt-get install -y rpicam-apps ffmpeg
 print_success "rpicam-apps installed"
 echo ""
 
+# Install pigpio for GPIO control
+print_header "Step 8: Installing pigpio (GPIO Control)"
+print_info "Installing pigpio library for 64-bit GPIO support..."
+sudo apt-get install -y pigpio python3-pigpio
+print_info "Enabling and starting pigpiod daemon..."
+sudo systemctl enable pigpiod
+sudo systemctl start pigpiod
+print_success "pigpio installed and daemon started"
+echo ""
+
 # Install Ruby gems
-print_header "Step 8: Installing Ruby Dependencies"
+print_header "Step 9: Installing Ruby Dependencies"
 print_info "This will install all required Ruby gems..."
 print_info "This may take 5-10 minutes on Raspberry Pi Zero 2W..."
 
@@ -295,7 +305,7 @@ fi
 echo ""
 
 # Configure camera
-print_header "Step 9: Configuring Camera"
+print_header "Step 10: Configuring Camera"
 print_info "Enabling camera interface..."
 
 # For newer Raspberry Pi OS (Bookworm+)
@@ -320,7 +330,7 @@ print_success "Camera configuration updated"
 echo ""
 
 # Configure rpicam streaming service
-print_header "Step 10: Configuring rpicam Streaming Service"
+print_header "Step 11: Configuring rpicam Streaming Service"
 if [ -f scripts/rpicam-stream.service ]; then
     print_info "Installing rpicam streaming service..."
 
@@ -336,7 +346,7 @@ fi
 echo ""
 
 # Setup systemd service
-print_header "Step 11: Installing Systemd Service"
+print_header "Step 12: Installing Systemd Service"
 if [ -f scripts/robot.service ]; then
     print_info "Installing robot control service..."
 
@@ -358,7 +368,7 @@ fi
 echo ""
 
 # Set permissions
-print_header "Step 12: Setting User Permissions"
+print_header "Step 13: Setting User Permissions"
 print_info "Adding user to required groups..."
 
 # Add to video group for camera access
@@ -381,7 +391,7 @@ print_warning "You may need to log out and back in for group changes to take eff
 echo ""
 
 # Enable services
-print_header "Step 13: Configuring Services"
+print_header "Step 14: Configuring Services"
 read -p "Enable rpicam streaming service to start on boot? (Y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then

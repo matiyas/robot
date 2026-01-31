@@ -5,22 +5,22 @@ RSpec.shared_context 'with mocked GPIO pins' do
 
   let(:left_motor) do
     {
-      in1: instance_double(PiPiper::Pin, on: nil, off: nil),
-      in2: instance_double(PiPiper::Pin, on: nil, off: nil)
+      in1: instance_double(Pigpio::IF::GPIO, write: nil),
+      in2: instance_double(Pigpio::IF::GPIO, write: nil)
     }
   end
 
   let(:right_motor) do
     {
-      in1: instance_double(PiPiper::Pin, on: nil, off: nil),
-      in2: instance_double(PiPiper::Pin, on: nil, off: nil)
+      in1: instance_double(Pigpio::IF::GPIO, write: nil),
+      in2: instance_double(Pigpio::IF::GPIO, write: nil)
     }
   end
 
   let(:turret_motor) do
     {
-      in1: instance_double(PiPiper::Pin, on: nil, off: nil),
-      in2: instance_double(PiPiper::Pin, on: nil, off: nil)
+      in1: instance_double(Pigpio::IF::GPIO, write: nil),
+      in2: instance_double(Pigpio::IF::GPIO, write: nil)
     }
   end
 

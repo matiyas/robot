@@ -8,8 +8,8 @@ gem 'puma', '~> 6.4'
 gem 'sinatra', '~> 3.2'
 gem 'sinatra-contrib', '~> 3.2'
 
-group :production, :development do
-  gem 'pi_piper', '~> 2.0'
+group :production do
+  gem 'pigpio', '~> 0.1'
 end
 
 group :test do

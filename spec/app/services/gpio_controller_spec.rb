@@ -31,22 +31,22 @@ RSpec.describe GpioController do
     it_behaves_like 'a movement method', :move_forward
 
     it 'sets left motor IN1 HIGH (forward)' do
-      expect(left_motor[:in1]).to receive(:on)
+      expect(left_motor[:in1]).to receive(:write).with(1)
       controller.move_forward
     end
 
     it 'sets left motor IN2 LOW (forward)' do
-      expect(left_motor[:in2]).to receive(:off)
+      expect(left_motor[:in2]).to receive(:write).with(0)
       controller.move_forward
     end
 
     it 'sets right motor IN1 HIGH (forward)' do
-      expect(right_motor[:in1]).to receive(:on)
+      expect(right_motor[:in1]).to receive(:write).with(1)
       controller.move_forward
     end
 
     it 'sets right motor IN2 LOW (forward)' do
-      expect(right_motor[:in2]).to receive(:off)
+      expect(right_motor[:in2]).to receive(:write).with(0)
       controller.move_forward
     end
 
@@ -87,22 +87,22 @@ RSpec.describe GpioController do
     it_behaves_like 'a movement method', :move_backward
 
     it 'sets left motor IN1 LOW (backward)' do
-      expect(left_motor[:in1]).to receive(:off)
+      expect(left_motor[:in1]).to receive(:write).with(0)
       controller.move_backward
     end
 
     it 'sets left motor IN2 HIGH (backward)' do
-      expect(left_motor[:in2]).to receive(:on)
+      expect(left_motor[:in2]).to receive(:write).with(1)
       controller.move_backward
     end
 
     it 'sets right motor IN1 LOW (backward)' do
-      expect(right_motor[:in1]).to receive(:off)
+      expect(right_motor[:in1]).to receive(:write).with(0)
       controller.move_backward
     end
 
     it 'sets right motor IN2 HIGH (backward)' do
-      expect(right_motor[:in2]).to receive(:on)
+      expect(right_motor[:in2]).to receive(:write).with(1)
       controller.move_backward
     end
 
@@ -123,22 +123,22 @@ RSpec.describe GpioController do
     it_behaves_like 'a movement method', :turn_left
 
     it 'sets left motor IN1 LOW (backward for tank turn)' do
-      expect(left_motor[:in1]).to receive(:off)
+      expect(left_motor[:in1]).to receive(:write).with(0)
       controller.turn_left
     end
 
     it 'sets left motor IN2 HIGH (backward for tank turn)' do
-      expect(left_motor[:in2]).to receive(:on)
+      expect(left_motor[:in2]).to receive(:write).with(1)
       controller.turn_left
     end
 
     it 'sets right motor IN1 HIGH (forward for tank turn)' do
-      expect(right_motor[:in1]).to receive(:on)
+      expect(right_motor[:in1]).to receive(:write).with(1)
       controller.turn_left
     end
 
     it 'sets right motor IN2 LOW (forward for tank turn)' do
-      expect(right_motor[:in2]).to receive(:off)
+      expect(right_motor[:in2]).to receive(:write).with(0)
       controller.turn_left
     end
 
@@ -159,22 +159,22 @@ RSpec.describe GpioController do
     it_behaves_like 'a movement method', :turn_right
 
     it 'sets left motor IN1 HIGH (forward for tank turn)' do
-      expect(left_motor[:in1]).to receive(:on)
+      expect(left_motor[:in1]).to receive(:write).with(1)
       controller.turn_right
     end
 
     it 'sets left motor IN2 LOW (forward for tank turn)' do
-      expect(left_motor[:in2]).to receive(:off)
+      expect(left_motor[:in2]).to receive(:write).with(0)
       controller.turn_right
     end
 
     it 'sets right motor IN1 LOW (backward for tank turn)' do
-      expect(right_motor[:in1]).to receive(:off)
+      expect(right_motor[:in1]).to receive(:write).with(0)
       controller.turn_right
     end
 
     it 'sets right motor IN2 HIGH (backward for tank turn)' do
-      expect(right_motor[:in2]).to receive(:on)
+      expect(right_motor[:in2]).to receive(:write).with(1)
       controller.turn_right
     end
 
@@ -195,12 +195,12 @@ RSpec.describe GpioController do
     it_behaves_like 'a movement method', :turret_left
 
     it 'sets turret motor IN1 LOW' do
-      expect(turret_motor[:in1]).to receive(:off)
+      expect(turret_motor[:in1]).to receive(:write).with(0)
       controller.turret_left
     end
 
     it 'sets turret motor IN2 HIGH' do
-      expect(turret_motor[:in2]).to receive(:on)
+      expect(turret_motor[:in2]).to receive(:write).with(1)
       controller.turret_left
     end
 
@@ -221,12 +221,12 @@ RSpec.describe GpioController do
     it_behaves_like 'a movement method', :turret_right
 
     it 'sets turret motor IN1 HIGH' do
-      expect(turret_motor[:in1]).to receive(:on)
+      expect(turret_motor[:in1]).to receive(:write).with(1)
       controller.turret_right
     end
 
     it 'sets turret motor IN2 LOW' do
-      expect(turret_motor[:in2]).to receive(:off)
+      expect(turret_motor[:in2]).to receive(:write).with(0)
       controller.turret_right
     end
 
@@ -255,20 +255,20 @@ RSpec.describe GpioController do
     end
 
     it 'sets left motor to coast (IN1 LOW, IN2 LOW)' do
-      expect(left_motor[:in1]).to receive(:off)
-      expect(left_motor[:in2]).to receive(:off)
+      expect(left_motor[:in1]).to receive(:write).with(0)
+      expect(left_motor[:in2]).to receive(:write).with(0)
       controller.stop_motors
     end
 
     it 'sets right motor to coast (IN1 LOW, IN2 LOW)' do
-      expect(right_motor[:in1]).to receive(:off)
-      expect(right_motor[:in2]).to receive(:off)
+      expect(right_motor[:in1]).to receive(:write).with(0)
+      expect(right_motor[:in2]).to receive(:write).with(0)
       controller.stop_motors
     end
 
     it 'sets turret motor to coast (IN1 LOW, IN2 LOW)' do
-      expect(turret_motor[:in1]).to receive(:off)
-      expect(turret_motor[:in2]).to receive(:off)
+      expect(turret_motor[:in1]).to receive(:write).with(0)
+      expect(turret_motor[:in2]).to receive(:write).with(0)
       controller.stop_motors
     end
 
@@ -404,26 +404,26 @@ RSpec.describe GpioController do
     let(:test_motor) { left_motor }
 
     it 'sets forward direction (IN1 HIGH, IN2 LOW)' do
-      expect(test_motor[:in1]).to receive(:on)
-      expect(test_motor[:in2]).to receive(:off)
+      expect(test_motor[:in1]).to receive(:write).with(1)
+      expect(test_motor[:in2]).to receive(:write).with(0)
       controller.send(:set_motor_direction, test_motor, :forward)
     end
 
     it 'sets backward direction (IN1 LOW, IN2 HIGH)' do
-      expect(test_motor[:in1]).to receive(:off)
-      expect(test_motor[:in2]).to receive(:on)
+      expect(test_motor[:in1]).to receive(:write).with(0)
+      expect(test_motor[:in2]).to receive(:write).with(1)
       controller.send(:set_motor_direction, test_motor, :backward)
     end
 
     it 'sets coast mode (IN1 LOW, IN2 LOW)' do
-      expect(test_motor[:in1]).to receive(:off)
-      expect(test_motor[:in2]).to receive(:off)
+      expect(test_motor[:in1]).to receive(:write).with(0)
+      expect(test_motor[:in2]).to receive(:write).with(0)
       controller.send(:set_motor_direction, test_motor, :coast)
     end
 
     it 'sets brake mode (IN1 HIGH, IN2 HIGH)' do
-      expect(test_motor[:in1]).to receive(:on)
-      expect(test_motor[:in2]).to receive(:on)
+      expect(test_motor[:in1]).to receive(:write).with(1)
+      expect(test_motor[:in2]).to receive(:write).with(1)
       controller.send(:set_motor_direction, test_motor, :brake)
     end
 
