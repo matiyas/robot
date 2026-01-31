@@ -33,13 +33,15 @@ if systemctl list-unit-files | grep -q "robot.service"; then
 fi
 
 if systemctl list-unit-files | grep -q "rpicam-stream.service"; then
-    read -p "Also stop rpicam streaming service? (y/N) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sudo systemctl stop rpicam-stream 2>/dev/null || true
-        sudo systemctl disable rpicam-stream 2>/dev/null || true
-        echo -e "${GREEN}✓${NC} rpicam streaming service stopped and disabled"
-    fi
+    sudo systemctl stop rpicam-stream 2>/dev/null || true
+    sudo systemctl disable rpicam-stream 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} rpicam streaming service stopped and disabled"
+fi
+
+if systemctl list-unit-files | grep -q "pigpiod.service"; then
+    sudo systemctl stop pigpiod 2>/dev/null || true
+    sudo systemctl disable pigpiod 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} pigpiod service stopped and disabled"
 fi
 
 echo ""
@@ -51,6 +53,22 @@ if [ -f /etc/systemd/system/robot.service ]; then
     echo -e "${GREEN}✓${NC} Removed robot service file"
 fi
 
+if [ -f /etc/systemd/system/rpicam-stream.service ]; then
+    sudo rm /etc/systemd/system/rpicam-stream.service
+    echo -e "${GREEN}✓${NC} Removed rpicam-stream service file"
+fi
+
+if [ -f /etc/systemd/system/pigpiod.service ]; then
+    sudo rm /etc/systemd/system/pigpiod.service
+    echo -e "${GREEN}✓${NC} Removed pigpiod service file"
+fi
+
+# Clean up FIFO
+if [ -p /tmp/camera_stream ]; then
+    sudo rm -f /tmp/camera_stream
+    echo -e "${GREEN}✓${NC} Removed camera stream FIFO"
+fi
+
 sudo systemctl daemon-reload
 echo -e "${GREEN}✓${NC} Systemd reloaded"
 
@@ -58,11 +76,11 @@ echo ""
 echo -e "${GREEN}Uninstall complete!${NC}"
 echo ""
 echo "The application code is still in place."
-echo "System packages (Ruby, Motion, etc.) are still installed."
+echo "System packages (Ruby, rpicam-apps, pigpio, etc.) are still installed."
 echo ""
 echo "To completely remove the application:"
 echo "  rm -rf $(pwd)"
 echo ""
-echo "To remove rpicam-apps:"
-echo "  sudo apt-get remove rpicam-apps"
+echo "To remove system packages:"
+echo "  sudo apt-get remove rpicam-apps pigpio"
 echo ""
