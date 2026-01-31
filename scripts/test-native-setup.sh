@@ -61,7 +61,8 @@ echo "Checking System Commands..."
 check_command ruby "--version"
 check_command bundle "--version"
 check_command git "--version"
-check_command motion "-h"
+check_command rpicam-vid "--version"
+check_command pigpiod "-v"
 
 echo ""
 echo "Checking rbenv Setup..."
@@ -114,7 +115,8 @@ fi
 echo ""
 echo "Checking Services..."
 check_service "robot"
-check_service "motion"
+check_service "rpicam-stream"
+check_service "pigpiod"
 
 echo ""
 echo "Checking User Groups..."
@@ -140,16 +142,22 @@ fi
 
 echo ""
 echo "Checking Configuration Files..."
-if [ -f /etc/motion/motion.conf ]; then
-    echo -e "${GREEN}✓${NC} Motion configuration exists"
+if [ -f /etc/systemd/system/rpicam-stream.service ]; then
+    echo -e "${GREEN}✓${NC} rpicam-stream service file exists"
 else
-    echo -e "${YELLOW}!${NC} Motion configuration not found"
+    echo -e "${YELLOW}!${NC} rpicam-stream service file not found"
 fi
 
 if [ -f /etc/systemd/system/robot.service ]; then
     echo -e "${GREEN}✓${NC} Robot service file exists"
 else
     echo -e "${YELLOW}!${NC} Robot service file not found"
+fi
+
+if [ -f /etc/systemd/system/pigpiod.service ]; then
+    echo -e "${GREEN}✓${NC} pigpiod service file exists"
+else
+    echo -e "${YELLOW}!${NC} pigpiod service file not found"
 fi
 
 echo ""

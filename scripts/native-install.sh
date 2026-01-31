@@ -279,26 +279,47 @@ echo ""
 
 # Install pigpio for GPIO control
 print_header "Step 8: Installing pigpio (GPIO Control)"
-print_info "Building pigpio library from source for 64-bit GPIO support..."
+print_info "Checking pigpio installation..."
 
 # Check if pigpio is already installed
-if command -v pigpiod &> /dev/null; then
-    print_warning "pigpiod already installed"
+if command -v pigpiod &> /dev/null && [ -f /usr/local/lib/libpigpio.so ]; then
+    print_warning "pigpio already installed"
     PIGPIO_VERSION=$(pigpiod -v 2>&1 || echo "unknown")
     print_info "Current version: $PIGPIO_VERSION"
+    print_info "Skipping build"
 else
+    print_info "Building pigpio library from source for 64-bit GPIO support..."
+
     # Install dependencies for building pigpio
     sudo apt-get install -y wget unzip
 
-    # Download and build pigpio
-    cd /tmp
-    wget https://github.com/joan2937/pigpio/archive/master.zip -O pigpio.zip
-    unzip -o pigpio.zip
-    cd pigpio-master
-    make
-    sudo make install
+    # Download pigpio if not already downloaded
+    if [ ! -d /tmp/pigpio-master ]; then
+        print_info "Downloading pigpio source..."
+        cd /tmp
+        wget -q https://github.com/joan2937/pigpio/archive/master.zip -O pigpio.zip
+        unzip -q -o pigpio.zip
+        rm pigpio.zip
+    else
+        print_info "Using existing pigpio source in /tmp/pigpio-master"
+    fi
+
+    # Build and install
+    cd /tmp/pigpio-master
+    print_info "Compiling pigpio (this may take a few minutes)..."
+    make -j$(nproc) > /dev/null 2>&1
+    sudo make install > /dev/null 2>&1
     cd "$PROJECT_DIR"
-    print_success "pigpio compiled and installed"
+
+    # Verify installation
+    if command -v pigpiod &> /dev/null; then
+        print_success "pigpio compiled and installed successfully"
+        PIGPIO_VERSION=$(pigpiod -v 2>&1 || echo "unknown")
+        print_info "Version: $PIGPIO_VERSION"
+    else
+        print_error "pigpio installation failed"
+        exit 1
+    fi
 fi
 
 # Create systemd service for pigpiod
