@@ -323,7 +323,11 @@ echo ""
 print_header "Step 10: Configuring rpicam Streaming Service"
 if [ -f scripts/rpicam-stream.service ]; then
     print_info "Installing rpicam streaming service..."
-    sudo cp scripts/rpicam-stream.service /etc/systemd/system/
+
+    # Update user in service file (keep Group=video for camera access)
+    sed "s|User=pi|User=$USER|g" scripts/rpicam-stream.service | \
+        sudo tee /etc/systemd/system/rpicam-stream.service > /dev/null
+
     sudo systemctl daemon-reload
     print_success "rpicam streaming service installed"
 else
@@ -336,9 +340,14 @@ print_header "Step 11: Installing Systemd Service"
 if [ -f scripts/robot.service ]; then
     print_info "Installing robot control service..."
 
-    # Update paths in service file
+    # Update paths and user in service file
+    # Get the user's primary group
+    USER_GROUP=$(id -gn)
+
     sed "s|/home/pi/robot|$PROJECT_DIR|g" scripts/robot.service | \
         sed "s|User=pi|User=$USER|g" | \
+        sed "s|Group=pi|Group=$USER_GROUP|g" | \
+        sed "s|/home/pi|$HOME|g" | \
         sudo tee /etc/systemd/system/robot.service > /dev/null
 
     sudo systemctl daemon-reload
