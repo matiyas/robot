@@ -59,9 +59,9 @@ else
     exit 1
 fi
 
-# Install Motion for camera streaming
-echo "Installing Motion (camera streaming)..."
-sudo apt-get install -y motion v4l-utils
+# Install rpicam for camera streaming
+echo "Installing rpicam-apps (camera streaming)..."
+sudo apt-get install -y rpicam-apps ffmpeg
 
 # Install bundler
 echo "Installing Bundler..."
@@ -72,10 +72,12 @@ rbenv rehash
 echo "Installing project dependencies..."
 bundle install
 
-# Configure Motion
-echo "Configuring Motion daemon..."
-sudo cp scripts/motion.conf /etc/motion/motion.conf
-sudo sed -i 's/start_motion_daemon=no/start_motion_daemon=yes/' /etc/default/motion
+# Configure rpicam streaming
+echo "Configuring rpicam streaming service..."
+if [ -f scripts/rpicam-stream.service ]; then
+    sudo cp scripts/rpicam-stream.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+fi
 
 # Enable camera interface
 echo "Enabling camera interface..."
@@ -93,10 +95,10 @@ if ! lsmod | grep -q bcm2835_v4l2; then
   echo "bcm2835_v4l2" | sudo tee -a /etc/modules
 fi
 
-# Enable and start Motion
-echo "Enabling Motion service..."
-sudo systemctl enable motion
-sudo systemctl start motion
+# Enable and start rpicam streaming
+echo "Enabling rpicam streaming service..."
+sudo systemctl enable rpicam-stream
+sudo systemctl start rpicam-stream
 
 # Install systemd service for robot app
 echo "Installing robot control service..."
@@ -117,14 +119,14 @@ echo "=========================================="
 echo ""
 echo "Next steps:"
 echo "1. Reboot your Raspberry Pi: sudo reboot"
-echo "2. After reboot, test the camera: raspistill -o test.jpg"
+echo "2. After reboot, test the camera: rpicam-still -o test.jpg"
 echo "3. Start the robot service: sudo systemctl start robot"
-echo "4. Access the control panel: http://$(hostname -I | awk '{print $1}'):80"
+echo "4. Access the control panel: http://$(hostname -I | awk '{print $1}'):4567"
 echo ""
 echo "For development mode (without GPIO):"
 echo "  bundle exec ruby app/robot_app.rb"
 echo ""
 echo "Check logs:"
 echo "  sudo journalctl -u robot -f"
-echo "  sudo journalctl -u motion -f"
+echo "  sudo journalctl -u rpicam-stream -f"
 echo ""

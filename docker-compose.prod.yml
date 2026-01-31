@@ -18,7 +18,7 @@ services:
 
     ports:
       - "80:80"      # Production port
-      - "8081:8081"  # Motion camera stream
+      - "8081:8081"  # Camera stream (rpicam-vid)
 
     volumes:
       # Mount configuration files

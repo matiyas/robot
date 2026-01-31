@@ -270,11 +270,11 @@ BUNDLER_VERSION=$(bundle --version)
 print_success "Bundler installed: $BUNDLER_VERSION"
 echo ""
 
-# Install Motion for camera streaming
-print_header "Step 7: Installing Motion (Camera Streaming)"
-print_info "Installing Motion and video utilities..."
-sudo apt-get install -y motion v4l-utils
-print_success "Motion installed"
+# Install rpicam for camera streaming
+print_header "Step 7: Installing rpicam (Camera Streaming)"
+print_info "Installing rpicam-apps for native camera support..."
+sudo apt-get install -y rpicam-apps ffmpeg
+print_success "rpicam-apps installed"
 echo ""
 
 # Install Ruby gems
@@ -319,20 +319,15 @@ fi
 print_success "Camera configuration updated"
 echo ""
 
-# Configure Motion
-print_header "Step 10: Configuring Motion Daemon"
-if [ -f scripts/motion.conf ]; then
-    print_info "Copying Motion configuration..."
-    sudo cp scripts/motion.conf /etc/motion/motion.conf
-
-    # Enable Motion daemon
-    if [ -f /etc/default/motion ]; then
-        sudo sed -i 's/start_motion_daemon=no/start_motion_daemon=yes/' /etc/default/motion
-    fi
-
-    print_success "Motion configured"
+# Configure rpicam streaming service
+print_header "Step 10: Configuring rpicam Streaming Service"
+if [ -f scripts/rpicam-stream.service ]; then
+    print_info "Installing rpicam streaming service..."
+    sudo cp scripts/rpicam-stream.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    print_success "rpicam streaming service installed"
 else
-    print_warning "Motion config not found, using defaults"
+    print_warning "rpicam service file not found, skipping"
 fi
 echo ""
 
@@ -378,13 +373,13 @@ echo ""
 
 # Enable services
 print_header "Step 13: Configuring Services"
-read -p "Enable Motion service to start on boot? (Y/n) " -n 1 -r
+read -p "Enable rpicam streaming service to start on boot? (Y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    sudo systemctl enable motion
-    print_success "Motion service enabled"
+    sudo systemctl enable rpicam-stream
+    print_success "rpicam streaming service enabled"
 else
-    print_info "Motion service not enabled"
+    print_info "rpicam streaming service not enabled"
 fi
 
 read -p "Enable Robot service to start on boot? (Y/n) " -n 1 -r
@@ -411,7 +406,7 @@ echo ""
 print_info "What was installed:"
 echo "  • Ruby $(ruby --version | awk '{print $2}')"
 echo "  • Bundler $(bundle --version | awk '{print $3}')"
-echo "  • Motion (camera streaming)"
+echo "  • rpicam-apps (camera streaming)"
 echo "  • All Ruby dependencies"
 echo "  • Systemd services configured"
 echo ""
@@ -422,12 +417,12 @@ echo "1. REBOOT YOUR RASPBERRY PI (required for camera and group changes)"
 echo "   ${GREEN}sudo reboot${NC}"
 echo ""
 echo "2. After reboot, verify camera works:"
-echo "   ${GREEN}libcamera-hello --list-cameras${NC}"
-echo "   ${GREEN}libcamera-still -o test.jpg${NC}"
+echo "   ${GREEN}rpicam-hello --list-cameras${NC}"
+echo "   ${GREEN}rpicam-still -o test.jpg${NC}"
 echo ""
-echo "3. Test Motion service:"
-echo "   ${GREEN}sudo systemctl status motion${NC}"
-echo "   ${GREEN}sudo systemctl start motion${NC}"
+echo "3. Test rpicam streaming service:"
+echo "   ${GREEN}sudo systemctl status rpicam-stream${NC}"
+echo "   ${GREEN}sudo systemctl start rpicam-stream${NC}"
 echo ""
 echo "4. Start the robot service:"
 echo "   ${GREEN}sudo systemctl start robot${NC}"
@@ -454,7 +449,7 @@ echo ""
 
 print_info "View Logs:"
 echo "  ${GREEN}sudo journalctl -u robot -f${NC}"
-echo "  ${GREEN}sudo journalctl -u motion -f${NC}"
+echo "  ${GREEN}sudo journalctl -u rpicam-stream -f${NC}"
 echo "  ${GREEN}tail -f $PROJECT_DIR/logs/*.log${NC}"
 echo ""
 

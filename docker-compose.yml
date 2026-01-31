@@ -21,7 +21,7 @@ services:
     ports:
       - "4567:4567"  # Development port
       - "80:80"      # Production port
-      - "8081:8081"  # Motion camera stream
+      - "8081:8081"  # Camera stream (rpicam-vid)
 
     volumes:
       # Mount configuration files
@@ -56,14 +56,5 @@ services:
       retries: 3
       start_period: 10s
 
-  # Motion service for camera streaming (optional, if not using system Motion)
-  # motion:
-  #   image: motion/motion:latest
-  #   container_name: robot-motion
-  #   ports:
-  #     - "8081:8081"
-  #   devices:
-  #     - /dev/video0:/dev/video0
-  #   volumes:
-  #     - ./scripts/motion.conf:/etc/motion/motion.conf:ro
-  #   restart: unless-stopped
+  # Note: Camera streaming should be handled natively on the Pi using rpicam-vid
+  # See scripts/rpicam-stream.service for the systemd service configuration

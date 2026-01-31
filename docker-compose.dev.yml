@@ -18,7 +18,7 @@ services:
 
     ports:
       - "4567:4567"  # Development port
-      - "8081:8081"  # Motion camera stream
+      - "8081:8081"  # Camera stream (rpicam-vid)
 
     volumes:
       # Mount application code for development (live reload)

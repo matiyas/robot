@@ -282,7 +282,7 @@ class RobotApp < Sinatra::Base
   # Returns camera stream URL
   #
   # Provides the URL for the camera video stream, typically served by
-  # Motion or another streaming service running on the Raspberry Pi.
+  # rpicam-vid or another streaming service running on the Raspberry Pi.
   #
   # @note GET /api/v1/camera
   #

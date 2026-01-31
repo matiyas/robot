@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     git \
     curl \
-    motion \
+    rpicam-apps \
+    ffmpeg \
     libssl-dev \
     libreadline-dev \
     zlib1g-dev \
@@ -58,8 +59,8 @@ RUN bundle config set --local without 'development test' && \
 # Copy application files
 COPY . .
 
-# Create directories for Motion and logs
-RUN mkdir -p /var/lib/motion /app/logs
+# Create directories for logs
+RUN mkdir -p /app/logs
 
 # Copy and set up scripts
 COPY docker-entrypoint.sh /usr/local/bin/
@@ -69,7 +70,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-healthche
 # Expose ports
 # 4567 - Sinatra app (development)
 # 80 - Sinatra app (production)
-# 8081 - Motion camera stream
+# 8081 - Camera stream (rpicam-vid)
 EXPOSE 4567 80 8081
 
 # Health check

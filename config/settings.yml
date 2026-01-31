@@ -5,7 +5,7 @@ default: &default
   turret_timeout: 2000    # milliseconds
   log_level: 'info'
   auth_enabled: false
-  camera_url: 'http://localhost:8081/stream'
+  camera_url: 'tcp://localhost:8081'
 
 development:
   <<: *default

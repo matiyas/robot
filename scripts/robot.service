@@ -1,8 +1,8 @@
 [Unit]
 Description=Robot Tank Control Web Application
 Documentation=https://github.com/yourusername/robot
-After=network.target motion.service
-Wants=motion.service
+After=network.target rpicam-stream.service
+Wants=rpicam-stream.service
 
 [Service]
 Type=simple

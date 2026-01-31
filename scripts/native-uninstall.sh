@@ -12,7 +12,7 @@ echo -e "${YELLOW}========================================${NC}"
 echo ""
 echo "This will remove the robot services but keep:"
 echo "  • Ruby and system packages"
-echo "  • Motion"
+echo "  • rpicam-apps"
 echo "  • Application code"
 echo ""
 read -p "Continue? (y/N) " -n 1 -r
@@ -32,13 +32,13 @@ if systemctl list-unit-files | grep -q "robot.service"; then
     echo -e "${GREEN}✓${NC} Robot service stopped and disabled"
 fi
 
-if systemctl list-unit-files | grep -q "motion.service"; then
-    read -p "Also stop Motion service? (y/N) " -n 1 -r
+if systemctl list-unit-files | grep -q "rpicam-stream.service"; then
+    read -p "Also stop rpicam streaming service? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sudo systemctl stop motion 2>/dev/null || true
-        sudo systemctl disable motion 2>/dev/null || true
-        echo -e "${GREEN}✓${NC} Motion service stopped and disabled"
+        sudo systemctl stop rpicam-stream 2>/dev/null || true
+        sudo systemctl disable rpicam-stream 2>/dev/null || true
+        echo -e "${GREEN}✓${NC} rpicam streaming service stopped and disabled"
     fi
 fi
 
@@ -63,6 +63,6 @@ echo ""
 echo "To completely remove the application:"
 echo "  rm -rf $(pwd)"
 echo ""
-echo "To remove Motion:"
-echo "  sudo apt-get remove motion"
+echo "To remove rpicam-apps:"
+echo "  sudo apt-get remove rpicam-apps"
 echo ""

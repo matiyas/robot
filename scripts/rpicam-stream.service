@@ -1,0 +1,40 @@
+[Unit]
+Description=Rpicam Video Streaming Service
+Documentation=https://www.raspberrypi.com/documentation/computers/camera_software.html
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=video
+WorkingDirectory=/tmp
+
+# Stream camera feed using rpicam-vid with libav output
+# Streams to HTTP on port 8081
+ExecStart=/usr/bin/rpicam-vid \
+    --inline \
+    --nopreview \
+    --timeout 0 \
+    --width 640 \
+    --height 480 \
+    --framerate 15 \
+    --codec mjpeg \
+    --quality 85 \
+    --listen \
+    -o tcp://0.0.0.0:8081
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+# Resource limits (important for Pi Zero 2W)
+MemoryLimit=150M
+CPUQuota=60%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rpicam-stream
+
+[Install]
+WantedBy=multi-user.target
