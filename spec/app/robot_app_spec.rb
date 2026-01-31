@@ -397,13 +397,14 @@ RSpec.describe RobotApp do
     it 'includes stream_url in response' do
       get '/api/v1/camera'
       body = JSON.parse(last_response.body)
-      expect(body['stream_url']).to eq(test_settings['camera_url'])
+      expect(body['stream_url']).to include(':8081')
+      expect(body['stream_url']).to start_with('http://')
     end
 
-    it 'returns camera URL from settings' do
+    it 'returns camera URL with dynamic host' do
       get '/api/v1/camera'
       body = JSON.parse(last_response.body)
-      expect(body['stream_url']).to eq('http://localhost:8081')
+      expect(body['stream_url']).to eq('http://example.org:8081')
     end
   end
 

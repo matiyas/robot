@@ -294,7 +294,10 @@ class RobotApp < Sinatra::Base
   #
   # @return [String] JSON response with camera stream URL
   get '/api/v1/camera' do
-    success_response(stream_url: settings.app_settings['camera_url'])
+    # Replace localhost with actual request host for browser compatibility
+    camera_url = settings.app_settings['camera_url']
+    dynamic_url = camera_url.gsub('localhost', request.host)
+    success_response(stream_url: dynamic_url)
   end
 
   # Health check endpoint for monitoring
