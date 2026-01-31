@@ -279,12 +279,58 @@ echo ""
 
 # Install pigpio for GPIO control
 print_header "Step 8: Installing pigpio (GPIO Control)"
-print_info "Installing pigpio library for 64-bit GPIO support..."
-sudo apt-get install -y pigpio python3-pigpio
+print_info "Building pigpio library from source for 64-bit GPIO support..."
+
+# Check if pigpio is already installed
+if command -v pigpiod &> /dev/null; then
+    print_warning "pigpiod already installed"
+    PIGPIO_VERSION=$(pigpiod -v 2>&1 || echo "unknown")
+    print_info "Current version: $PIGPIO_VERSION"
+else
+    # Install dependencies for building pigpio
+    sudo apt-get install -y wget unzip
+
+    # Download and build pigpio
+    cd /tmp
+    wget https://github.com/joan2937/pigpio/archive/master.zip -O pigpio.zip
+    unzip -o pigpio.zip
+    cd pigpio-master
+    make
+    sudo make install
+    cd "$PROJECT_DIR"
+    print_success "pigpio compiled and installed"
+fi
+
+# Create systemd service for pigpiod
+print_info "Configuring pigpiod daemon..."
+sudo tee /etc/systemd/system/pigpiod.service > /dev/null << 'PIGPIOD_EOF'
+[Unit]
+Description=Pigpio daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/pigpiod -l
+ExecStop=/bin/systemctl kill pigpiod
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+PIGPIOD_EOF
+
 print_info "Enabling and starting pigpiod daemon..."
+sudo systemctl daemon-reload
 sudo systemctl enable pigpiod
 sudo systemctl start pigpiod
-print_success "pigpio installed and daemon started"
+
+# Verify daemon is running
+if sudo systemctl is-active --quiet pigpiod; then
+    print_success "pigpio installed and daemon is running"
+else
+    print_error "Failed to start pigpiod daemon"
+    sudo systemctl status pigpiod --no-pager
+    exit 1
+fi
 echo ""
 
 # Install Ruby gems

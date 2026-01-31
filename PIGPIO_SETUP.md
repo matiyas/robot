@@ -8,19 +8,48 @@ This project has been migrated from `pi_piper` to `pigpio` to support 64-bit Ras
 
 ### 1. Install pigpio C library
 
+Since `pigpio` is not available as a package in all Raspberry Pi OS versions, we compile it from source:
+
 ```bash
-# Update package list
+# Install build dependencies
 sudo apt-get update
+sudo apt-get install -y wget unzip build-essential
 
-# Install pigpio library and daemon
-sudo apt-get install -y pigpio python3-pigpio
+# Download and build pigpio
+cd /tmp
+wget https://github.com/joan2937/pigpio/archive/master.zip -O pigpio.zip
+unzip pigpio.zip
+cd pigpio-master
+make
+sudo make install
+```
 
-# Enable and start pigpiod daemon
+### 2. Create and start pigpiod daemon
+
+```bash
+# Create systemd service
+sudo tee /etc/systemd/system/pigpiod.service > /dev/null << 'EOF'
+[Unit]
+Description=Pigpio daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/pigpiod -l
+ExecStop=/bin/systemctl kill pigpiod
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start the daemon
+sudo systemctl daemon-reload
 sudo systemctl enable pigpiod
 sudo systemctl start pigpiod
 ```
 
-### 2. Install Ruby gem
+### 3. Install Ruby gem
 
 The pigpio Ruby gem will be installed automatically when you run:
 
@@ -28,7 +57,7 @@ The pigpio Ruby gem will be installed automatically when you run:
 bundle install
 ```
 
-### 3. Verify installation
+### 4. Verify installation
 
 Check that the pigpiod daemon is running:
 
@@ -60,16 +89,15 @@ Then log out and back in for the group change to take effect.
 
 ## Updating native-install.sh
 
-The `scripts/native-install.sh` script should be updated to include pigpio installation. Add these lines:
+The `scripts/native-install.sh` script has been updated to build pigpio from source (since it's not available as a package in all repos). The script now:
 
-```bash
-# Install pigpio library for GPIO control
-print_step "Installing pigpio library"
-sudo apt-get install -y pigpio python3-pigpio
-sudo systemctl enable pigpiod
-sudo systemctl start pigpiod
-print_success "pigpio installed and daemon started"
-```
+1. Checks if pigpiod is already installed
+2. Downloads pigpio source from GitHub
+3. Compiles and installs it
+4. Creates a systemd service
+5. Enables and starts the pigpiod daemon
+
+This is automatically handled by the updated installation script.
 
 ## Why pigpio instead of pi_piper?
 

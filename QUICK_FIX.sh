@@ -18,13 +18,51 @@ echo ""
 
 # Step 1: Install pigpio system library
 echo -e "${YELLOW}Step 1: Installing pigpio library...${NC}"
-sudo apt-get update
-sudo apt-get install -y pigpio python3-pigpio
-echo -e "${GREEN}✓ pigpio library installed${NC}"
+
+# Check if pigpio is already installed
+if command -v pigpiod &> /dev/null; then
+    echo -e "${GREEN}✓ pigpiod already installed${NC}"
+    pigpiod -v 2>&1 || echo "Version: unknown"
+else
+    echo "Building pigpio from source..."
+    sudo apt-get update
+    sudo apt-get install -y wget unzip build-essential
+
+    # Download and build pigpio
+    cd /tmp
+    wget https://github.com/joan2937/pigpio/archive/master.zip -O pigpio.zip
+    unzip -o pigpio.zip
+    cd pigpio-master
+    make
+    sudo make install
+    cd ~
+    echo -e "${GREEN}✓ pigpio compiled and installed${NC}"
+fi
 echo ""
 
 # Step 2: Enable and start pigpiod daemon
 echo -e "${YELLOW}Step 2: Starting pigpiod daemon...${NC}"
+
+# Create systemd service if it doesn't exist
+if [ ! -f /etc/systemd/system/pigpiod.service ]; then
+    echo "Creating pigpiod systemd service..."
+    sudo tee /etc/systemd/system/pigpiod.service > /dev/null << 'PIGPIOD_EOF'
+[Unit]
+Description=Pigpio daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/pigpiod -l
+ExecStop=/bin/systemctl kill pigpiod
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+PIGPIOD_EOF
+    sudo systemctl daemon-reload
+fi
+
 sudo systemctl enable pigpiod
 sudo systemctl start pigpiod
 
@@ -33,6 +71,8 @@ if sudo systemctl is-active --quiet pigpiod; then
     echo -e "${GREEN}✓ pigpiod daemon is running${NC}"
 else
     echo -e "${RED}✗ Failed to start pigpiod daemon${NC}"
+    echo "Checking daemon status..."
+    sudo systemctl status pigpiod --no-pager
     exit 1
 fi
 echo ""
