@@ -10,8 +10,8 @@ settings_file = File.join(__dir__, 'settings.yml')
 all_settings = YAML.load_file(settings_file, aliases: true)
 config = all_settings['default'].merge(all_settings[env] || {})
 
-# Number of worker processes (use 1 for Raspberry Pi Zero 2W)
-workers ENV.fetch('WEB_CONCURRENCY', 1)
+# Number of worker processes (0 = single mode, no forking - best for Pi Zero 2W)
+workers ENV.fetch('WEB_CONCURRENCY', 0)
 
 # Number of threads per worker
 threads_count = ENV.fetch('RAILS_MAX_THREADS', 5)
@@ -30,10 +30,12 @@ preload_app!
 plugin :tmp_restart
 
 # Log configuration
-stdout_redirect '/app/logs/puma_stdout.log', '/app/logs/puma_stderr.log', true if env == 'production'
-
-# Logging
-if env == 'development'
+# Note: In production with systemd, logs are captured via StandardOutput=journal
+# No need for file redirection - use: journalctl -u robot.service -f
+if env == 'production'
+  # Log to stdout/stderr (captured by systemd)
+  log_requests true
+elsif env == 'development'
   # In development, log to stdout
   log_requests true
 end
