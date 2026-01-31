@@ -401,8 +401,14 @@ print_header "Step 11: Configuring rpicam Streaming Service"
 if [ -f scripts/rpicam-stream.service ]; then
     print_info "Installing rpicam streaming service (HTTP MJPEG)..."
 
-    # Update user in service file (keep Group=video for camera access)
-    sed "s|User=pi|User=$USER|g" scripts/rpicam-stream.service | \
+    # Make MJPEG server script executable
+    if [ -f scripts/mjpeg-server.rb ]; then
+        chmod +x scripts/mjpeg-server.rb
+        print_info "MJPEG server script made executable"
+    fi
+
+    # Update user and project directory in service file (keep Group=video for camera access)
+    sed -e "s|User=pi|User=$USER|g" -e "s|PROJECT_DIR|$PROJECT_DIR|g" scripts/rpicam-stream.service | \
         sudo tee /etc/systemd/system/rpicam-stream.service > /dev/null
 
     sudo systemctl daemon-reload

@@ -9,8 +9,8 @@ User=pi
 Group=video
 WorkingDirectory=/tmp
 
-# Stream camera using rpicam-vid piped to ffmpeg for HTTP MJPEG
-# rpicam-vid outputs to stdout, ffmpeg serves HTTP multipart MJPEG on port 8081
+# Stream camera using rpicam-vid piped to Ruby MJPEG HTTP server
+# rpicam-vid outputs MJPEG to stdout, Ruby server handles HTTP multipart streaming on port 8081
 ExecStart=/bin/bash -c '/usr/bin/rpicam-vid \
     --inline \
     --nopreview \
@@ -21,24 +21,15 @@ ExecStart=/bin/bash -c '/usr/bin/rpicam-vid \
     --codec mjpeg \
     --quality 85 \
     -o - | \
-    /usr/bin/ffmpeg \
-    -probesize 32 \
-    -analyzeduration 0 \
-    -fflags nobuffer \
-    -f mjpeg \
-    -i - \
-    -c:v copy \
-    -f mpjpeg \
-    -listen 1 \
-    http://0.0.0.0:8081'
+    PROJECT_DIR/scripts/mjpeg-server.rb'
 
 # Restart policy
 Restart=always
 RestartSec=5
 
 # Resource limits (important for Pi Zero 2W)
-MemoryLimit=250M
-CPUQuota=100%
+MemoryLimit=200M
+CPUQuota=80%
 
 # Logging
 StandardOutput=journal
