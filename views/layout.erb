@@ -6,13 +6,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Robot Tank Control</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=<%= Time.now.to_i %>">
 </head>
 <body>
   <div class="container">
     <%= yield %>
   </div>
-  <script src="/js/api-client.js"></script>
-  <script src="/js/robot-controller.js"></script>
+  <script src="/js/api-client.js?v=<%= Time.now.to_i %>"></script>
+  <script src="/js/robot-controller.js?v=<%= Time.now.to_i %>"></script>
 </body>
 </html>
