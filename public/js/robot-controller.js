@@ -3,8 +3,8 @@ class RobotController {
   constructor() {
     this.api = new RobotAPI();
     this.isConnected = false;
-    this.movementDuration = 200; // ms for button press
-    this.turretDuration = 300; // ms for turret rotation
+    this.movementDuration = 250; // ms for each movement command (with overlap for smooth motion)
+    this.turretDuration = 350; // ms for each turret rotation command
 
     this.init();
   }
@@ -65,8 +65,13 @@ class RobotController {
       isPressed = true;
       button.classList.add('active');
 
-      // Execute action
+      // Execute action immediately
       action();
+
+      // Continue executing action while button is held
+      pressTimer = setInterval(() => {
+        action();
+      }, 100); // Send command every 100ms for continuous movement
 
       console.log(`Button pressed: ${button.id}`);
     };
@@ -76,6 +81,15 @@ class RobotController {
 
       isPressed = false;
       button.classList.remove('active');
+
+      // Stop repeating commands
+      if (pressTimer) {
+        clearInterval(pressTimer);
+        pressTimer = null;
+      }
+
+      // Send stop command to immediately halt movement
+      this.stopMovement();
 
       console.log(`Button released: ${button.id}`);
     };
@@ -119,6 +133,15 @@ class RobotController {
     } catch (error) {
       console.error('Emergency stop failed:', error);
       this.showError('Emergency stop failed');
+    }
+  }
+
+  async stopMovement() {
+    try {
+      const result = await this.api.stop();
+      console.log('Movement stopped');
+    } catch (error) {
+      console.error('Stop movement failed:', error);
     }
   }
 
