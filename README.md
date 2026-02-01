@@ -92,7 +92,7 @@ make shell
 
 ### Detailed Documentation
 
-See **[DOCKER.md](DOCKER.md)** for comprehensive Docker documentation including:
+See **[DOCKER.md](docs/DOCKER.md)** for comprehensive Docker documentation including:
 - Complete setup guide
 - Configuration options
 - Troubleshooting
@@ -221,7 +221,7 @@ sudo journalctl -u robot -f
 
 ### Detailed Native Installation Documentation
 
-See **[NATIVE_INSTALLATION.md](NATIVE_INSTALLATION.md)** for comprehensive guide including:
+See **[NATIVE_INSTALLATION.md](docs/NATIVE_INSTALLATION.md)** for comprehensive guide including:
 - Detailed installation steps
 - Configuration options
 - Performance optimization

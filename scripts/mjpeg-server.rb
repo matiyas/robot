@@ -38,7 +38,7 @@ require 'fcntl'
 #   # Browser: Access stream
 #   http://localhost:8081
 #
-# @see https://github.com/matiyas/robot/blob/main/VIDEO_STREAMING.md Full architecture documentation
+# @see https://github.com/matiyas/robot/blob/main/docs/VIDEO_STREAMING.md Full architecture documentation
 # @author Robot Tank Control Team
 # @version 1.0.0
 class MjpegServer
