@@ -69,7 +69,7 @@ Complete summary of native installation files and documentation for Raspberry Pi
 
 ```bash
 # 1. Clone and enter directory
-git clone https://github.com/yourusername/robot.git && cd robot
+git clone https://github.com/matiyas/robot.git && cd robot
 
 # 2. Run installation
 ./scripts/native-install.sh

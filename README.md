@@ -61,7 +61,7 @@ There are two ways to install and run the robot tank controller:
 ```bash
 # 1. Clone repository
 cd ~
-git clone https://github.com/yourusername/robot.git
+git clone https://github.com/matiyas/robot.git
 cd robot
 
 # 2. Run deployment script
@@ -112,7 +112,7 @@ See **[DOCKER.md](DOCKER.md)** for comprehensive Docker documentation including:
 ```bash
 # 1. Clone repository
 cd ~
-git clone https://github.com/yourusername/robot.git
+git clone https://github.com/matiyas/robot.git
 cd robot
 
 # 2. Run installation script

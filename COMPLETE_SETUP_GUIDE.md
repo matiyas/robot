@@ -116,7 +116,7 @@ Do you want to run other services alongside the robot?
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/robot.git && cd robot
+git clone https://github.com/matiyas/robot.git && cd robot
 
 # Run deployment
 ./scripts/docker-deploy-pi.sh
@@ -134,7 +134,7 @@ git clone https://github.com/yourusername/robot.git && cd robot
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/robot.git && cd robot
+git clone https://github.com/matiyas/robot.git && cd robot
 
 # Run installation
 ./scripts/native-install.sh

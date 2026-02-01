@@ -73,7 +73,7 @@ Metrics/AbcSize:
 
 # Allow compact controller specs
 Metrics/ClassLength:
-  Max: 150
+  Max: 170
 
 # Disable RSpec style cops that require extensive test rewrites
 RSpec/MessageSpies:

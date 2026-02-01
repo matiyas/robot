@@ -7,7 +7,7 @@ Quick reference for installing Robot Tank Control on Raspberry Pi Zero 2W.
 ## 🐳 Docker Installation (3 Commands)
 
 ```bash
-git clone https://github.com/yourusername/robot.git && cd robot
+git clone https://github.com/matiyas/robot.git && cd robot
 ./scripts/docker-deploy-pi.sh
 # Access: http://<PI_IP>
 ```
@@ -25,7 +25,7 @@ make shell         # Shell access
 ## 💻 Native Installation (3 Commands)
 
 ```bash
-git clone https://github.com/yourusername/robot.git && cd robot
+git clone https://github.com/matiyas/robot.git && cd robot
 ./scripts/native-install.sh
 sudo reboot
 ```

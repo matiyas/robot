@@ -58,7 +58,7 @@ The easiest way to install is using the automated script:
 ```bash
 # 1. Clone the repository
 cd ~
-git clone https://github.com/yourusername/robot.git
+git clone https://github.com/matiyas/robot.git
 cd robot
 
 # 2. Run the installation script

@@ -125,7 +125,7 @@ Ruby Gems (from Gemfile, installed via bundler):
 QUICK START (3 Commands)
 ================================================================================
 
-git clone https://github.com/yourusername/robot.git && cd robot
+git clone https://github.com/matiyas/robot.git && cd robot
 ./scripts/native-install.sh
 sudo reboot
 
