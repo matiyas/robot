@@ -1,5 +1,11 @@
 # Robot Tank Control
 
+[![CI](https://github.com/matiyas/robot/actions/workflows/ci.yml/badge.svg)](https://github.com/matiyas/robot/actions/workflows/ci.yml)
+[![Ruby](https://img.shields.io/badge/Ruby-3.2-red.svg)](https://www.ruby-lang.org/)
+[![Sinatra](https://img.shields.io/badge/Sinatra-3.2-orange.svg)](http://sinatrarb.com/)
+[![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi-c51a4a.svg)](https://www.raspberrypi.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Features real-time camera streaming, GPIO motor control via DRV8833 drivers, and a mobile-responsive control panel.
 
 ## Features
