@@ -24,17 +24,31 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 
 ## GPIO Pin Configuration
 
-| Motor | Function | GPIO Pin (BCM) | DRV8833 Pin |
-|-------|----------|----------------|-------------|
-| Left Wheel | Forward | GPIO 17 | IN1 |
-| Left Wheel | Backward | GPIO 18 | IN2 |
-| Left Wheel | PWM Enable | GPIO 12 | EN |
-| Right Wheel | Forward | GPIO 22 | IN1 |
-| Right Wheel | Backward | GPIO 23 | IN2 |
-| Right Wheel | PWM Enable | GPIO 13 | EN |
-| Turret | Left Rotation | GPIO 27 | IN1 |
-| Turret | Right Rotation | GPIO 24 | IN2 |
-| Turret | PWM Enable | GPIO 19 | EN |
+### DRV8833 #1: Wheel Motors
+
+| Motor | Function | GPIO Pin (BCM) | DRV8833 Pin | Output |
+|-------|----------|----------------|-------------|--------|
+| Left Wheel | Forward | GPIO 17 | IN1 | OUT1 |
+| Left Wheel | Backward | GPIO 18 | IN2 | OUT2 |
+| Right Wheel | Forward | GPIO 22 | IN3 | OUT3 |
+| Right Wheel | Backward | GPIO 23 | IN4 | OUT4 |
+| Both | PWM Enable | GPIO 12 | EEP | - |
+
+### DRV8833 #2: Turret Motor
+
+| Motor | Function | GPIO Pin (BCM) | DRV8833 Pin | Output |
+|-------|----------|----------------|-------------|--------|
+| Turret | Left Rotation | GPIO 27 | IN1 | OUT1 |
+| Turret | Right Rotation | GPIO 24 | IN2 | OUT2 |
+| Turret | PWM Enable | GPIO 19 | EEP | - |
+
+### Power Connections (Both Controllers)
+
+| DRV8833 Pin | Connect To |
+|-------------|------------|
+| VCC | Raspberry Pi 3.3V |
+| GND | Raspberry Pi GND |
+| ULT | Motor battery + (3-6V) |
 
 *Note: PWM pins provide soft-start to prevent inrush current spikes. The system works without PWM pins connected (backward compatible).*
 
