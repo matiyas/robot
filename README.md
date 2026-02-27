@@ -662,9 +662,13 @@ Pull requests are welcome! Please follow these guidelines:
 3. Update documentation
 4. Follow existing code style
 
+## Author
+
+**matiyas** - [GitHub](https://github.com/matiyas)
+
 ## License
 
-MIT License - feel free to use this project for your own robot!
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Safety
 
@@ -677,8 +681,8 @@ MIT License - feel free to use this project for your own robot!
 ## Credits
 
 - Built with [Sinatra](http://sinatrarb.com/)
-- GPIO control via [pi_piper](https://github.com/jwhitehorn/pi_piper)
-- Camera streaming via [Motion](https://motion-project.github.io/)
+- GPIO control via [pigpio](https://github.com/joan2937/pigpio)
+- Camera streaming via [rpicam-apps](https://github.com/raspberrypi/rpicam-apps)
 - Runs on [Raspberry Pi](https://www.raspberrypi.org/)
 
 ## Support
