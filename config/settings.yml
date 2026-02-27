@@ -6,6 +6,9 @@ default: &default
   log_level: 'info'
   auth_enabled: false
   camera_url: 'http://localhost:8081'
+  pwm_enabled: true
+  pwm_frequency: 1000     # Hz (1kHz - quiet, good resolution for DC motors)
+  pwm_ramp_duration: 500  # milliseconds to reach full power
 
 development:
   <<: *default

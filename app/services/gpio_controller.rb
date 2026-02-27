@@ -28,7 +28,8 @@ require_relative 'control_interface'
 #
 # @example Initialize controller
 #   gpio_manager = GpioManager.new('config/gpio_pins.yml', logger)
-#   controller = GpioController.new(gpio_manager, logger)
+#   pwm_ramper = PwmRamper.new(gpio_manager.pwm_pins, settings, logger)
+#   controller = GpioController.new(gpio_manager, logger, pwm_ramper)
 #
 # @example Move forward for 1 second
 #   controller.move_forward(duration: 1000)
@@ -41,13 +42,16 @@ class GpioController < ControlInterface
   #
   # @param gpio_manager [GpioManager] Initialized GPIO manager with configured pins
   # @param logger [Logger, nil] Logger instance for debugging (default: stdout)
+  # @param pwm_ramper [PwmRamper, nil] PWM ramper for soft-start (nil for instant-on)
   #
   # @return [GpioController] A new GPIO controller instance
-  def initialize(gpio_manager, logger = nil) # rubocop:disable Lint/MissingSuper
+  def initialize(gpio_manager, logger = nil, pwm_ramper = nil) # rubocop:disable Lint/MissingSuper
     @gpio = gpio_manager
     @logger = logger || Logger.new($stdout)
+    @pwm_ramper = pwm_ramper
     @movement_thread = nil
-    @logger.info 'GpioController initialized'
+    pwm_status = @pwm_ramper ? ' with PWM soft-start' : nil
+    @logger.info "GpioController initialized#{pwm_status}"
   end
 
   # Moves both motors forward
@@ -62,6 +66,7 @@ class GpioController < ControlInterface
     @logger.debug 'Moving forward'
     set_motor_direction(@gpio.left_motor, :forward)
     set_motor_direction(@gpio.right_motor, :forward)
+    start_pwm_ramp(%i[left right])
     auto_stop_after(duration) if duration
   end
 
@@ -77,6 +82,7 @@ class GpioController < ControlInterface
     @logger.debug 'Moving backward'
     set_motor_direction(@gpio.left_motor, :backward)
     set_motor_direction(@gpio.right_motor, :backward)
+    start_pwm_ramp(%i[left right])
     auto_stop_after(duration) if duration
   end
 
@@ -93,6 +99,7 @@ class GpioController < ControlInterface
     # Tank turn: left motor backward, right motor forward
     set_motor_direction(@gpio.left_motor, :backward)
     set_motor_direction(@gpio.right_motor, :forward)
+    start_pwm_ramp(%i[left right])
     auto_stop_after(duration) if duration
   end
 
@@ -109,6 +116,7 @@ class GpioController < ControlInterface
     # Tank turn: left motor forward, right motor backward
     set_motor_direction(@gpio.left_motor, :forward)
     set_motor_direction(@gpio.right_motor, :backward)
+    start_pwm_ramp(%i[left right])
     auto_stop_after(duration) if duration
   end
 
@@ -120,6 +128,7 @@ class GpioController < ControlInterface
   def turret_left(duration: nil)
     @logger.debug 'Turret rotating left'
     set_motor_direction(@gpio.turret_motor, :backward)
+    start_pwm_ramp(%i[turret])
     auto_stop_after(duration) if duration
   end
 
@@ -131,6 +140,7 @@ class GpioController < ControlInterface
   def turret_right(duration: nil)
     @logger.debug 'Turret rotating right'
     set_motor_direction(@gpio.turret_motor, :forward)
+    start_pwm_ramp(%i[turret])
     auto_stop_after(duration) if duration
   end
 
@@ -144,6 +154,8 @@ class GpioController < ControlInterface
     @logger.debug 'Stopping all motors'
     # Only cancel auto-stop if we're not being called from within the movement thread
     cancel_auto_stop unless Thread.current == @movement_thread
+    # Stop PWM ramps first (if available)
+    @pwm_ramper&.stop_all
     set_motor_direction(@gpio.left_motor, :coast)
     set_motor_direction(@gpio.right_motor, :coast)
     set_motor_direction(@gpio.turret_motor, :coast)
@@ -239,5 +251,21 @@ class GpioController < ControlInterface
 
     @movement_thread.kill
     @movement_thread = nil
+  end
+
+  # Starts PWM ramp-up for the specified motors
+  #
+  # Triggers soft-start PWM ramping for the given motors if a PWM ramper
+  # is available. This prevents inrush current spikes that can cause
+  # Raspberry Pi resets.
+  #
+  # @param motors [Array<Symbol>] Motor identifiers (:left, :right, :turret)
+  # @return [void]
+  #
+  # @api private
+  def start_pwm_ramp(motors)
+    return unless @pwm_ramper
+
+    motors.each { |motor| @pwm_ramper.ramp_up(motor) }
   end
 end

@@ -2,6 +2,7 @@
 
 require 'spec_helper'
 require_relative '../../../app/services/gpio_controller'
+require_relative '../../../app/services/pwm_ramper'
 
 RSpec.describe GpioController do
   subject(:controller) { described_class.new(gpio_manager, test_logger) }
@@ -496,6 +497,109 @@ RSpec.describe GpioController do
       controller.turn_left(duration: 10_000)
       second_thread = controller.instance_variable_get(:@movement_thread)
       expect(first_thread).not_to eq(second_thread)
+    end
+  end
+
+  describe 'PWM integration' do
+    subject(:controller_with_pwm) { described_class.new(gpio_manager, test_logger, pwm_ramper) }
+
+    let(:pwm_ramper) { instance_double(PwmRamper) }
+
+    before do
+      allow(pwm_ramper).to receive(:ramp_up)
+      allow(pwm_ramper).to receive(:stop)
+      allow(pwm_ramper).to receive(:stop_all)
+    end
+
+    describe '#initialize' do
+      it 'stores the pwm_ramper' do
+        expect(controller_with_pwm.instance_variable_get(:@pwm_ramper)).to eq(pwm_ramper)
+      end
+
+      it 'logs initialization with PWM enabled' do
+        described_class.new(gpio_manager, test_logger, pwm_ramper)
+        expect(logged_info.any? { |msg| msg.include?('PWM soft-start') }).to be true
+      end
+    end
+
+    describe '#move_forward' do
+      it 'triggers PWM ramp for left and right motors' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:left)
+        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+        controller_with_pwm.move_forward
+      end
+    end
+
+    describe '#move_backward' do
+      it 'triggers PWM ramp for left and right motors' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:left)
+        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+        controller_with_pwm.move_backward
+      end
+    end
+
+    describe '#turn_left' do
+      it 'triggers PWM ramp for left and right motors' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:left)
+        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+        controller_with_pwm.turn_left
+      end
+    end
+
+    describe '#turn_right' do
+      it 'triggers PWM ramp for left and right motors' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:left)
+        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+        controller_with_pwm.turn_right
+      end
+    end
+
+    describe '#turret_left' do
+      it 'triggers PWM ramp for turret motor' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:turret)
+        controller_with_pwm.turret_left
+      end
+    end
+
+    describe '#turret_right' do
+      it 'triggers PWM ramp for turret motor' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:turret)
+        controller_with_pwm.turret_right
+      end
+    end
+
+    describe '#stop_motors' do
+      it 'stops PWM before setting motor direction' do
+        expect(pwm_ramper).to receive(:stop_all).ordered
+        expect(left_motor[:in1]).to receive(:write).with(0).ordered
+        controller_with_pwm.stop_motors
+      end
+    end
+  end
+
+  describe 'backward compatibility (without PWM)' do
+    subject(:controller_without_pwm) { described_class.new(gpio_manager, test_logger, nil) }
+
+    it 'works without PWM ramper' do
+      expect { controller_without_pwm.move_forward }.not_to raise_error
+    end
+
+    it 'does not log PWM in initialization' do
+      described_class.new(gpio_manager, test_logger, nil)
+      expect(logged_info.none? { |msg| msg.include?('PWM') }).to be true
+    end
+
+    it 'movement methods work without PWM' do
+      expect { controller_without_pwm.move_forward }.not_to raise_error
+      expect { controller_without_pwm.move_backward }.not_to raise_error
+      expect { controller_without_pwm.turn_left }.not_to raise_error
+      expect { controller_without_pwm.turn_right }.not_to raise_error
+      expect { controller_without_pwm.turret_left }.not_to raise_error
+      expect { controller_without_pwm.turret_right }.not_to raise_error
+    end
+
+    it 'stop_motors works without PWM' do
+      expect { controller_without_pwm.stop_motors }.not_to raise_error
     end
   end
 end

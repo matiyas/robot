@@ -5,6 +5,9 @@ default: &default
   turret_timeout: 2000
   log_level: 'info'
   auth_enabled: false
+  pwm_enabled: true
+  pwm_frequency: 1000
+  pwm_ramp_duration: 500
 
 test:
   <<: *default

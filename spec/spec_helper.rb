@@ -24,6 +24,8 @@ module Pigpio
       attr_accessor :mode, :pud
 
       def write(_value); end
+
+      def pwm(_duty_cycle); end
     end
   end
 

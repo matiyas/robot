@@ -47,7 +47,10 @@ class GpioManager
   #
   # @!attribute [r] turret_motor
   #   @return [Hash] Turret motor pins with keys :in1 and :in2
-  attr_reader :left_motor, :right_motor, :turret_motor
+  #
+  # @!attribute [r] pwm_pins
+  #   @return [Hash, nil] PWM pins keyed by motor symbol, or nil if PWM unavailable
+  attr_reader :left_motor, :right_motor, :turret_motor, :pwm_pins
 
   # Initializes the GPIO manager and all pins
   #
@@ -102,6 +105,9 @@ class GpioManager
       in2: setup_output_pin(@config['motor_turret']['in2'])
     }
 
+    # Initialize PWM pins (optional - graceful degradation if not present)
+    @pwm_pins = initialize_pwm_pins
+
     # Set all pins to LOW (coast) initially
     reset_all_pins
   end
@@ -119,10 +125,48 @@ class GpioManager
     pin
   end
 
+  # Initializes PWM pins for motor speed control
+  #
+  # Reads enable pin numbers from config and creates GPIO objects for PWM.
+  # Returns nil if no enable pins are configured or initialization fails.
+  # This provides backward compatibility when PWM pins are not connected.
+  #
+  # @return [Hash, nil] PWM pins keyed by motor symbol, or nil if unavailable
+  #
+  # @api private
+  def initialize_pwm_pins
+    pins = {}
+    { left: 'motor_left', right: 'motor_right', turret: 'motor_turret' }.each do |motor_sym, config_key|
+      pin = setup_pwm_pin(motor_sym, config_key)
+      pins[motor_sym] = pin if pin
+    end
+    pins.empty? ? nil : pins
+  end
+
+  # Sets up a single PWM pin for a motor
+  #
+  # @param motor_sym [Symbol] Motor identifier
+  # @param config_key [String] Configuration key for the motor
+  # @return [Pigpio::IF::GPIO, nil] Configured GPIO object or nil if not available
+  #
+  # @api private
+  def setup_pwm_pin(motor_sym, config_key)
+    enable_pin = @config.dig(config_key, 'enable')
+    return nil unless enable_pin
+
+    pin = setup_output_pin(enable_pin)
+    @logger.debug "PWM initialized on GPIO #{enable_pin} for #{motor_sym} motor"
+    pin
+  rescue StandardError => e
+    @logger.warn "PWM initialization failed for #{motor_sym} motor: #{e.message}"
+    nil
+  end
+
   # Resets all GPIO pins to LOW (coast mode)
   #
   # Sets both input pins for all motors to LOW, putting them in coast mode
-  # where motors can freely spin down. This is the safe default state.
+  # where motors can freely spin down. Also resets PWM duty cycles to 0
+  # if PWM pins are available. This is the safe default state.
   #
   # @return [void]
   def reset_all_pins
@@ -130,6 +174,10 @@ class GpioManager
       motor[:in1].write(0)
       motor[:in2].write(0)
     end
+
+    # Reset PWM duty cycles if available
+    @pwm_pins&.each_value { |pin| pin.pwm(0) }
+
     @logger.debug 'All GPIO pins reset to LOW'
   end
 

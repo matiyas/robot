@@ -340,4 +340,115 @@ RSpec.describe GpioManager do
       end
     end
   end
+
+  describe '#pwm_pins' do
+    context 'when enable pins are configured' do
+      let(:gpio_config_with_pwm) do
+        {
+          'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
+          'motor_right' => { 'in1' => 22, 'in2' => 23, 'enable' => 13 },
+          'motor_turret' => { 'in1' => 27, 'in2' => 24, 'enable' => 19 }
+        }
+      end
+
+      let(:left_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
+      let(:right_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
+      let(:turret_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
+
+      before do
+        allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_with_pwm)
+        allow(mock_pigpio).to receive(:gpio).with(12).and_return(left_pwm_pin)
+        allow(mock_pigpio).to receive(:gpio).with(13).and_return(right_pwm_pin)
+        allow(mock_pigpio).to receive(:gpio).with(19).and_return(turret_pwm_pin)
+      end
+
+      it 'returns hash with PWM pins for all motors' do
+        manager = described_class.new(config_path, test_logger)
+        expect(manager.pwm_pins).to be_a(Hash)
+        expect(manager.pwm_pins.keys).to contain_exactly(:left, :right, :turret)
+      end
+
+      it 'initializes PWM pins as outputs' do
+        expect(left_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
+        expect(right_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
+        expect(turret_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
+        described_class.new(config_path, test_logger)
+      end
+
+      it 'logs PWM initialization' do
+        described_class.new(config_path, test_logger)
+        expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('left') }).to be true
+        expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('right') }).to be true
+        expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('turret') }).to be true
+      end
+
+      it 'resets PWM duty cycles in reset_all_pins' do
+        manager = described_class.new(config_path, test_logger)
+
+        expect(left_pwm_pin).to receive(:pwm).with(0)
+        expect(right_pwm_pin).to receive(:pwm).with(0)
+        expect(turret_pwm_pin).to receive(:pwm).with(0)
+        manager.reset_all_pins
+      end
+    end
+
+    context 'when enable pins are not configured' do
+      it 'returns nil for pwm_pins' do
+        expect(gpio_manager.pwm_pins).to be_nil
+      end
+
+      it 'does not log PWM initialization' do
+        described_class.new(config_path, test_logger)
+        expect(logged_debug.none? { |msg| msg.include?('PWM initialized') }).to be true
+      end
+    end
+
+    context 'when enable pin initialization fails' do
+      let(:gpio_config_with_pwm) do
+        {
+          'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
+          'motor_right' => { 'in1' => 22, 'in2' => 23 },
+          'motor_turret' => { 'in1' => 27, 'in2' => 24 }
+        }
+      end
+
+      before do
+        allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_with_pwm)
+        allow(mock_pigpio).to receive(:gpio).with(12).and_raise(StandardError, 'Pin not available')
+      end
+
+      it 'logs warning and continues' do
+        described_class.new(config_path, test_logger)
+        expect(logged_warn.any? { |msg| msg.include?('PWM initialization failed') }).to be true
+      end
+
+      it 'returns nil if all PWM pins fail' do
+        manager = described_class.new(config_path, test_logger)
+        expect(manager.pwm_pins).to be_nil
+      end
+    end
+
+    context 'with partial enable pin configuration' do
+      let(:gpio_config_partial_pwm) do
+        {
+          'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
+          'motor_right' => { 'in1' => 22, 'in2' => 23 },
+          'motor_turret' => { 'in1' => 27, 'in2' => 24 }
+        }
+      end
+
+      let(:left_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
+
+      before do
+        allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_partial_pwm)
+        allow(mock_pigpio).to receive(:gpio).with(12).and_return(left_pwm_pin)
+      end
+
+      it 'only includes configured PWM pins' do
+        manager = described_class.new(config_path, test_logger)
+        expect(manager.pwm_pins).to be_a(Hash)
+        expect(manager.pwm_pins.keys).to contain_exactly(:left)
+      end
+    end
+  end
 end

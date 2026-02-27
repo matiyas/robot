@@ -19,6 +19,7 @@ require_relative 'control_interface'
 #
 # @example Initialize mock controller
 #   controller = MockController.new(logger)
+#   controller = MockController.new(logger, pwm_enabled: true)  # with PWM simulation
 #
 # @example Move forward (logs instead of controlling hardware)
 #   controller.move_forward(duration: 1000)
@@ -31,11 +32,14 @@ class MockController < ControlInterface
   # Initializes the mock controller
   #
   # @param logger [Logger, nil] Logger instance for output (default: stdout)
+  # @param pwm_enabled [Boolean] Whether to simulate PWM soft-start logging
   #
   # @return [MockController] A new mock controller instance
-  def initialize(logger = nil) # rubocop:disable Lint/MissingSuper
+  def initialize(logger = nil, pwm_enabled: false) # rubocop:disable Lint/MissingSuper
     @logger = logger || Logger.new($stdout)
-    @logger.info 'MockController initialized (no GPIO)'
+    @pwm_enabled = pwm_enabled
+    pwm_status = @pwm_enabled ? ', PWM simulation enabled' : nil
+    @logger.info "MockController initialized (no GPIO#{pwm_status})"
   end
 
   # Simulates moving forward
@@ -47,6 +51,7 @@ class MockController < ControlInterface
   # @return [void]
   def move_forward(duration: nil)
     log_action('FORWARD', duration)
+    log_pwm_ramp(%i[left right])
     simulate_movement(duration) if duration
   end
 
@@ -59,6 +64,7 @@ class MockController < ControlInterface
   # @return [void]
   def move_backward(duration: nil)
     log_action('BACKWARD', duration)
+    log_pwm_ramp(%i[left right])
     simulate_movement(duration) if duration
   end
 
@@ -71,6 +77,7 @@ class MockController < ControlInterface
   # @return [void]
   def turn_left(duration: nil)
     log_action('TURN LEFT', duration)
+    log_pwm_ramp(%i[left right])
     simulate_movement(duration) if duration
   end
 
@@ -83,6 +90,7 @@ class MockController < ControlInterface
   # @return [void]
   def turn_right(duration: nil)
     log_action('TURN RIGHT', duration)
+    log_pwm_ramp(%i[left right])
     simulate_movement(duration) if duration
   end
 
@@ -95,6 +103,7 @@ class MockController < ControlInterface
   # @return [void]
   def turret_left(duration: nil)
     log_action('TURRET LEFT', duration)
+    log_pwm_ramp(%i[turret])
     simulate_movement(duration) if duration
   end
 
@@ -107,6 +116,7 @@ class MockController < ControlInterface
   # @return [void]
   def turret_right(duration: nil)
     log_action('TURRET RIGHT', duration)
+    log_pwm_ramp(%i[turret])
     simulate_movement(duration) if duration
   end
 
@@ -160,6 +170,24 @@ class MockController < ControlInterface
     Thread.new do
       sleep(duration / 1000.0)
       @logger.info 'Movement completed'
+    end
+  end
+
+  # Logs PWM ramp simulation for specified motors
+  #
+  # Only logs when PWM simulation is enabled. Used to verify PWM
+  # integration in development mode.
+  #
+  # @param motors [Array<Symbol>] Motor identifiers (:left, :right, :turret)
+  #
+  # @return [void]
+  #
+  # @api private
+  def log_pwm_ramp(motors)
+    return unless @pwm_enabled
+
+    motors.each do |motor|
+      @logger.debug "PWM #{motor}: simulating ramp-up"
     end
   end
 end

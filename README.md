@@ -10,7 +10,8 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 - **GPIO Motor Control**: DRV8833 dual H-bridge motor drivers for 3 motors
 - **Safety Mechanisms**: Auto-stop, emergency stop, and graceful shutdown
 - **Development Mode**: Mock controller for testing without GPIO hardware
-- **Future-Ready**: Abstracted control interface for GamePad support and PWM speed control
+- **PWM Soft-Start**: Linear motor ramp-up prevents circuit overloads and Pi resets
+- **Future-Ready**: Abstracted control interface for GamePad support
 
 ## Hardware Requirements
 
@@ -27,12 +28,15 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 |-------|----------|----------------|-------------|
 | Left Wheel | Forward | GPIO 17 | IN1 |
 | Left Wheel | Backward | GPIO 18 | IN2 |
+| Left Wheel | PWM Enable | GPIO 12 | EN |
 | Right Wheel | Forward | GPIO 22 | IN1 |
 | Right Wheel | Backward | GPIO 23 | IN2 |
+| Right Wheel | PWM Enable | GPIO 13 | EN |
 | Turret | Left Rotation | GPIO 27 | IN1 |
 | Turret | Right Rotation | GPIO 24 | IN2 |
+| Turret | PWM Enable | GPIO 19 | EN |
 
-*Note: GPIO 12, 13, and 19 are reserved for future PWM speed control*
+*Note: PWM pins provide soft-start to prevent inrush current spikes. The system works without PWM pins connected (backward compatible).*
 
 ## Installation
 
@@ -446,7 +450,20 @@ production:
   turret_timeout: 2000    # Max turret rotation duration (ms)
   log_level: 'info'
   auth_enabled: false     # Enable authentication (future)
+  pwm_enabled: true       # Enable PWM soft-start
+  pwm_frequency: 1000     # PWM frequency in Hz (1kHz default)
+  pwm_ramp_duration: 500  # Time to reach full power (ms)
 ```
+
+### PWM Soft-Start
+
+PWM soft-start prevents sudden current spikes when motors start, which can cause the Raspberry Pi to reset. When enabled, motor power ramps linearly from 0 to 100% over the configured duration.
+
+- **pwm_enabled**: Set to `true` to enable soft-start (default: `true`)
+- **pwm_frequency**: PWM frequency in Hz, 1000 Hz is quiet and provides good resolution
+- **pwm_ramp_duration**: Time in milliseconds to reach full power (default: 500ms)
+
+The system is backward compatible - it works without PWM pins connected by falling back to instant-on behavior.
 
 ### GPIO Pin Mapping
 
@@ -456,7 +473,7 @@ Edit `config/gpio_pins.yml` if your wiring differs:
 motor_left:
   in1: 17  # Forward
   in2: 18  # Backward
-  enable: 12  # Future PWM
+  enable: 12  # PWM soft-start (optional)
 ```
 
 ### Camera Settings
@@ -591,7 +608,7 @@ robot/
 
 ## Future Enhancements
 
-- [ ] PWM speed control for variable motor speeds
+- [x] PWM soft-start for motor protection
 - [ ] GamePad controller support (USB or Bluetooth)
 - [ ] Authentication (HTTP Basic Auth or JWT)
 - [ ] Battery voltage monitoring
