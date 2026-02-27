@@ -181,15 +181,20 @@ class RobotApp < Sinatra::Base
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Robot Tank Control API - Documentation</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+        <style>
+          body { margin: 0; padding: 0; }
+          #swagger-ui { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        </style>
       </head>
       <body>
         <div id="swagger-ui"></div>
         <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
         <script>
           SwaggerUIBundle({
             url: '/openapi.yaml',
             dom_id: '#swagger-ui',
-            presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+            presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
             layout: 'StandaloneLayout'
           });
         </script>
