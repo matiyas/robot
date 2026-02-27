@@ -60,6 +60,28 @@ RSpec.describe RobotApp do
     end
   end
 
+  describe 'GET /docs' do
+    it 'returns 200 status' do
+      get '/docs'
+      expect(last_response).to be_ok
+    end
+
+    it 'renders HTML' do
+      get '/docs'
+      expect(last_response.content_type).to include('text/html')
+    end
+
+    it 'includes Swagger UI' do
+      get '/docs'
+      expect(last_response.body).to include('swagger-ui')
+    end
+
+    it 'references the OpenAPI spec' do
+      get '/docs'
+      expect(last_response.body).to include('/openapi.yaml')
+    end
+  end
+
   describe 'GET /health' do
     it 'returns 200 status' do
       get '/health'

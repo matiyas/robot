@@ -1,0 +1,346 @@
+openapi: 3.0.3
+info:
+  title: Robot Tank Control API
+  description: RESTful API for controlling a Raspberry Pi-based robot tank
+  version: 1.0.0
+  contact:
+    name: Robot Tank Control
+    url: https://github.com/matiyas/robot
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:4567
+    description: Development server
+  - url: http://robot.local:4567
+    description: Production server (Raspberry Pi)
+tags:
+  - name: Movement
+    description: Robot movement control endpoints
+  - name: Turret
+    description: Camera turret control endpoints
+  - name: Status
+    description: Robot status and health endpoints
+paths:
+  /health:
+    get:
+      tags:
+        - Status
+      summary: Health check
+      description: Simple health check endpoint for monitoring and load balancers
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                timestamp: 1640000000
+  /api/v1/status:
+    get:
+      tags:
+        - Status
+      summary: Get robot status
+      description: Returns current robot status including connection state, GPIO enablement, and camera configuration
+      operationId: getStatus
+      responses:
+        '200':
+          description: Robot status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                success: true
+                connected: true
+                gpio_enabled: true
+                camera_url: http://192.168.1.100:8081
+  /api/v1/camera:
+    get:
+      tags:
+        - Status
+      summary: Get camera stream URL
+      description: Returns the URL for the camera video stream served by rpicam-vid
+      operationId: getCameraUrl
+      responses:
+        '200':
+          description: Camera URL retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraResponse'
+              example:
+                success: true
+                stream_url: http://192.168.1.100:8081
+  /api/v1/move:
+    post:
+      tags:
+        - Movement
+      summary: Control robot movement
+      description: |
+        Move the robot in the specified direction. Tank turning is used for left/right movements:
+        - Left: left motor backward, right motor forward
+        - Right: left motor forward, right motor backward
+      operationId: move
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveRequest'
+            examples:
+              forward:
+                summary: Move forward for 1 second
+                value:
+                  direction: forward
+                  duration: 1000
+              backward:
+                summary: Move backward continuously
+                value:
+                  direction: backward
+              turnLeft:
+                summary: Turn left for 500ms
+                value:
+                  direction: left
+                  duration: 500
+      responses:
+        '200':
+          description: Movement command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoveResponse'
+              example:
+                success: true
+                action: forward
+                duration: 1000
+        '400':
+          description: Invalid direction or request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Invalid direction 'invalid'. Valid options: forward, backward, left, right"
+  /api/v1/turret:
+    post:
+      tags:
+        - Turret
+      summary: Control turret rotation
+      description: Rotate the camera turret left or right for the specified duration
+      operationId: turret
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurretRequest'
+            examples:
+              left:
+                summary: Rotate turret left for 500ms
+                value:
+                  direction: left
+                  duration: 500
+              right:
+                summary: Rotate turret right continuously
+                value:
+                  direction: right
+      responses:
+        '200':
+          description: Turret command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurretResponse'
+              example:
+                success: true
+                action: turret_left
+                duration: 500
+        '400':
+          description: Invalid direction or request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Invalid direction 'up'. Valid options: left, right"
+  /api/v1/stop:
+    post:
+      tags:
+        - Movement
+      summary: Emergency stop
+      description: Immediately stop all motor movement (wheels and turret) by setting all motor pins to LOW (coast mode)
+      operationId: stop
+      responses:
+        '200':
+          description: All motors stopped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopResponse'
+              example:
+                success: true
+                action: stop_all
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          description: Health status indicator
+          example: ok
+        timestamp:
+          type: integer
+          description: Unix timestamp of the health check
+          example: 1640000000
+    StatusResponse:
+      type: object
+      required:
+        - success
+        - connected
+        - gpio_enabled
+        - camera_url
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+          example: true
+        connected:
+          type: boolean
+          description: Whether the robot controller is connected
+          example: true
+        gpio_enabled:
+          type: boolean
+          description: Whether GPIO hardware control is enabled
+          example: true
+        camera_url:
+          type: string
+          format: uri
+          description: URL of the camera stream
+          example: http://192.168.1.100:8081
+    CameraResponse:
+      type: object
+      required:
+        - success
+        - stream_url
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+          example: true
+        stream_url:
+          type: string
+          format: uri
+          description: URL of the camera MJPEG stream
+          example: http://192.168.1.100:8081
+    MoveRequest:
+      type: object
+      required:
+        - direction
+      properties:
+        direction:
+          type: string
+          enum:
+            - forward
+            - backward
+            - left
+            - right
+          description: Direction to move the robot
+          example: forward
+        duration:
+          type: integer
+          minimum: 0
+          description: Duration of movement in milliseconds. If omitted, movement continues until stopped.
+          example: 1000
+    MoveResponse:
+      type: object
+      required:
+        - success
+        - action
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+          example: true
+        action:
+          type: string
+          description: The action that was performed
+          example: forward
+        duration:
+          type: integer
+          nullable: true
+          description: Duration of the movement in milliseconds
+          example: 1000
+    TurretRequest:
+      type: object
+      required:
+        - direction
+      properties:
+        direction:
+          type: string
+          enum:
+            - left
+            - right
+          description: Direction to rotate the turret
+          example: left
+        duration:
+          type: integer
+          minimum: 0
+          description: Duration of rotation in milliseconds. If omitted, rotation continues until stopped.
+          example: 500
+    TurretResponse:
+      type: object
+      required:
+        - success
+        - action
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+          example: true
+        action:
+          type: string
+          description: The action that was performed
+          example: turret_left
+        duration:
+          type: integer
+          nullable: true
+          description: Duration of the rotation in milliseconds
+          example: 500
+    StopResponse:
+      type: object
+      required:
+        - success
+        - action
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+          example: true
+        action:
+          type: string
+          description: The action that was performed
+          example: stop_all
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
+        error:
+          type: string
+          description: Description of the error
+          example: Invalid direction

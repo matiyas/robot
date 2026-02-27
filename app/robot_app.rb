@@ -163,6 +163,41 @@ class RobotApp < Sinatra::Base
     erb :index
   end
 
+  # Serves Swagger UI for API documentation
+  #
+  # Renders an HTML page with Swagger UI that loads the OpenAPI specification.
+  # The OpenAPI spec is auto-generated from RSpec tests using rspec-openapi.
+  #
+  # @note GET /docs
+  #
+  # @return [String] HTML page with embedded Swagger UI
+  get '/docs' do
+    content_type :html
+    <<~HTML
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Robot Tank Control API - Documentation</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+          SwaggerUIBundle({
+            url: '/openapi.yaml',
+            dom_id: '#swagger-ui',
+            presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+            layout: 'StandaloneLayout'
+          });
+        </script>
+      </body>
+      </html>
+    HTML
+  end
+
   # API Routes
 
   # Before filter for all API endpoints
