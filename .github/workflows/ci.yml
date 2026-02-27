@@ -16,6 +16,8 @@ jobs:
         with:
           ruby-version: '3.2'
           bundler-cache: true
+        env:
+          BUNDLE_WITHOUT: production
       - run: bundle exec rubocop
 
   test:
@@ -27,6 +29,8 @@ jobs:
         with:
           ruby-version: '3.2'
           bundler-cache: true
+        env:
+          BUNDLE_WITHOUT: production
       - run: bundle exec rspec
 
   commitlint:
