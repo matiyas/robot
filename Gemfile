@@ -24,9 +24,9 @@ end
 group :development, :test do
   gem 'pry', '~> 0.14'
   gem 'pry-byebug', '~> 3.10'
-  gem 'rubocop', '~> 1.60'
-  gem 'rubocop-performance', '~> 1.20'
-  gem 'rubocop-rspec', '~> 2.27'
+  gem 'rubocop', '~> 1.85'
+  gem 'rubocop-performance', '~> 1.26'
+  gem 'rubocop-rspec', '~> 3.9'
 end
 
 group :development do

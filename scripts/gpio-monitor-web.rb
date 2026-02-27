@@ -246,28 +246,28 @@ class GpioMonitorWeb < Sinatra::Base
                   const stateClass = 'state-' + motor.motor_state.toLowerCase();
 
                   card.innerHTML = `
-                    <div class="motor-name">\${motor.name}</div>
+                    <div class="motor-name">${motor.name}</div>
 
                     <div class="pin-row">
-                      <div class="pin-label">GPIO \${motor.in1.pin} (IN1)</div>
+                      <div class="pin-label">GPIO ${motor.in1.pin} (IN1)</div>
                       <div class="pin-state">
-                        <span class="pin-value \${motor.in1.state === 1 ? 'pin-high' : 'pin-low'}">
-                          \${motor.in1.state === 1 ? 'HIGH' : 'LOW'}
+                        <span class="pin-value ${motor.in1.state === 1 ? 'pin-high' : 'pin-low'}">
+                          ${motor.in1.state === 1 ? 'HIGH' : 'LOW'}
                         </span>
                       </div>
                     </div>
 
                     <div class="pin-row">
-                      <div class="pin-label">GPIO \${motor.in2.pin} (IN2)</div>
+                      <div class="pin-label">GPIO ${motor.in2.pin} (IN2)</div>
                       <div class="pin-state">
-                        <span class="pin-value \${motor.in2.state === 1 ? 'pin-high' : 'pin-low'}">
-                          \${motor.in2.state === 1 ? 'HIGH' : 'LOW'}
+                        <span class="pin-value ${motor.in2.state === 1 ? 'pin-high' : 'pin-low'}">
+                          ${motor.in2.state === 1 ? 'HIGH' : 'LOW'}
                         </span>
                       </div>
                     </div>
 
-                    <div class="motor-state \${stateClass}">
-                      \${motor.motor_state}
+                    <div class="motor-state ${stateClass}">
+                      ${motor.motor_state}
                     </div>
                   `;
 

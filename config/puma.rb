@@ -32,13 +32,7 @@ plugin :tmp_restart
 # Log configuration
 # Note: In production with systemd, logs are captured via StandardOutput=journal
 # No need for file redirection - use: journalctl -u robot.service -f
-if env == 'production'
-  # Log to stdout/stderr (captured by systemd)
-  log_requests true
-elsif env == 'development'
-  # In development, log to stdout
-  log_requests true
-end
+log_requests true if %w[production development].include?(env)
 
 # Worker-specific configuration
 on_worker_boot do
