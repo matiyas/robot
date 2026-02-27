@@ -8,6 +8,31 @@
 
 A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Features real-time camera streaming, GPIO motor control via DRV8833 drivers, and a mobile-responsive control panel.
 
+## Table of Contents
+
+- [Features](#features)
+- [Hardware Requirements](#hardware-requirements)
+- [GPIO Pin Configuration](#gpio-pin-configuration)
+- [Installation](#installation)
+  - [Option 1: Docker Installation](#option-1-docker-installation-recommended)
+  - [Option 2: Native Installation](#option-2-native-installation)
+- [Quick Reference: System Dependencies](#quick-reference-system-dependencies)
+- [Verification](#verification)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Safety](#safety)
+- [Future Enhancements](#future-enhancements)
+- [Contributing](#contributing)
+- [Author](#author)
+- [License](#license)
+- [Credits](#credits)
+- [Support](#support)
+
 ## Features
 
 - **Web Control Panel**: Responsive UI that works on desktop and mobile devices
@@ -281,7 +306,7 @@ v4l-utils       # Camera utilities
 # Ruby gems (installed via bundler)
 puma            # Web server
 sinatra         # Web framework
-pi_piper        # GPIO control
+pigpio          # GPIO control
 ```
 
 **Note**: Ruby is installed via rbenv using the version specified in `.ruby-version` (currently 3.2.2)
@@ -308,38 +333,32 @@ curl -X POST http://<PI_IP_ADDRESS>/api/v1/move \
 # Open browser to http://<PI_IP_ADDRESS>
 ```
 
-## Development
+## Usage
 
-### Local Development (Without GPIO)
+### Web Interface
 
-You can develop and test the application on your computer without GPIO hardware:
+1. Connect to the same WiFi network as your Raspberry Pi
+2. Open a browser and navigate to `http://<PI_IP_ADDRESS>`
+3. Use the on-screen controls to drive the robot
 
-```bash
-bundle install
-bundle exec ruby app/robot_app.rb
-```
+**Controls:**
+- **D-pad**: Forward, backward, left, right
+- **Turret buttons**: Rotate turret left/right
+- **Emergency Stop**: Immediately stops all motors
 
-The app will run in development mode using MockController. Access at `http://localhost:4567`
+### Mobile Apps
 
-### Auto-reload in Development
+Use the JSON API to build custom mobile applications. Example using fetch API:
 
-```bash
-bundle exec rerun ruby app/robot_app.rb
-```
-
-### Test API Endpoints
-
-```bash
-# Check status
-curl http://localhost:4567/api/v1/status
-
-# Move forward for 1 second
-curl -X POST http://localhost:4567/api/v1/move \
-  -H "Content-Type: application/json" \
-  -d '{"direction":"forward","duration":1000}'
-
-# Emergency stop
-curl -X POST http://localhost:4567/api/v1/stop
+```javascript
+// Move forward for 1 second
+fetch('http://PI_IP/api/v1/move', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({direction: 'forward', duration: 1000})
+})
+.then(response => response.json())
+.then(data => console.log(data));
 ```
 
 ## API Documentation
@@ -508,32 +527,88 @@ quality 85
 stream_port 8081
 ```
 
-## Usage
+## Development
 
-### Web Interface
+### Local Development (Without GPIO)
 
-1. Connect to the same WiFi network as your Raspberry Pi
-2. Open a browser and navigate to `http://<PI_IP_ADDRESS>`
-3. Use the on-screen controls to drive the robot
+You can develop and test the application on your computer without GPIO hardware:
 
-**Controls:**
-- **D-pad**: Forward, backward, left, right
-- **Turret buttons**: Rotate turret left/right
-- **Emergency Stop**: Immediately stops all motors
+```bash
+bundle install
+bundle exec ruby app/robot_app.rb
+```
 
-### Mobile Apps
+The app will run in development mode using MockController. Access at `http://localhost:4567`
 
-Use the JSON API to build custom mobile applications. Example using fetch API:
+### Auto-reload in Development
 
-```javascript
-// Move forward for 1 second
-fetch('http://PI_IP/api/v1/move', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify({direction: 'forward', duration: 1000})
-})
-.then(response => response.json())
-.then(data => console.log(data));
+```bash
+bundle exec rerun ruby app/robot_app.rb
+```
+
+### Test API Endpoints
+
+```bash
+# Check status
+curl http://localhost:4567/api/v1/status
+
+# Move forward for 1 second
+curl -X POST http://localhost:4567/api/v1/move \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"forward","duration":1000}'
+
+# Emergency stop
+curl -X POST http://localhost:4567/api/v1/stop
+```
+
+## Architecture
+
+The project uses a clean abstraction layer that separates hardware control from business logic:
+
+- **ControlInterface**: Abstract base class defining control methods
+- **GpioController**: Hardware implementation using pigpio library
+- **MockController**: Development implementation for testing
+- **Robot Model**: High-level orchestration and business logic
+- **Sinatra App**: HTTP API and web interface
+
+This architecture makes it easy to:
+- Test without hardware
+- Swap control implementations (GPIO → GamePad)
+- Add authentication
+- Extend with new features
+
+## Project Structure
+
+```
+robot/
+├── app/
+│   ├── robot_app.rb              # Main Sinatra application
+│   ├── models/
+│   │   └── robot.rb              # Robot control model
+│   ├── services/
+│   │   ├── control_interface.rb  # Abstract controller
+│   │   ├── gpio_controller.rb    # GPIO implementation
+│   │   └── mock_controller.rb    # Development mock
+│   └── helpers/
+│       └── api_helpers.rb        # API utilities
+├── lib/
+│   ├── gpio_manager.rb           # GPIO lifecycle
+│   └── safety_handler.rb         # Safety mechanisms
+├── public/
+│   ├── css/style.css             # Responsive styles
+│   └── js/
+│       ├── api-client.js         # API wrapper
+│       └── robot-controller.js   # UI controller
+├── views/
+│   ├── layout.erb                # HTML layout
+│   └── index.erb                 # Control panel
+├── config/
+│   ├── settings.yml              # App configuration
+│   └── gpio_pins.yml             # GPIO mappings
+└── scripts/
+    ├── setup.sh                  # Installation script
+    ├── motion.conf               # Camera config
+    └── robot.service             # Systemd service
 ```
 
 ## Troubleshooting
@@ -592,39 +667,13 @@ top -b -n 1 | grep -E "ruby|motion"
 # quality 85 -> 75
 ```
 
-## Project Structure
+## Safety
 
-```
-robot/
-├── app/
-│   ├── robot_app.rb              # Main Sinatra application
-│   ├── models/
-│   │   └── robot.rb              # Robot control model
-│   ├── services/
-│   │   ├── control_interface.rb  # Abstract controller
-│   │   ├── gpio_controller.rb    # GPIO implementation
-│   │   └── mock_controller.rb    # Development mock
-│   └── helpers/
-│       └── api_helpers.rb        # API utilities
-├── lib/
-│   ├── gpio_manager.rb           # GPIO lifecycle
-│   └── safety_handler.rb         # Safety mechanisms
-├── public/
-│   ├── css/style.css             # Responsive styles
-│   └── js/
-│       ├── api-client.js         # API wrapper
-│       └── robot-controller.js   # UI controller
-├── views/
-│   ├── layout.erb                # HTML layout
-│   └── index.erb                 # Control panel
-├── config/
-│   ├── settings.yml              # App configuration
-│   └── gpio_pins.yml             # GPIO mappings
-└── scripts/
-    ├── setup.sh                  # Installation script
-    ├── motion.conf               # Camera config
-    └── robot.service             # Systemd service
-```
+- Always test in a safe environment
+- Keep the emergency stop button accessible
+- Monitor battery levels
+- Use appropriate voltage regulators
+- Ensure proper motor driver heat dissipation
 
 ## Future Enhancements
 
@@ -636,22 +685,6 @@ robot/
 - [ ] IMU for orientation tracking
 - [ ] Recording and playback of movement sequences
 - [ ] Autonomous navigation modes
-
-## Architecture
-
-The project uses a clean abstraction layer that separates hardware control from business logic:
-
-- **ControlInterface**: Abstract base class defining control methods
-- **GpioController**: Hardware implementation using pi_piper gem
-- **MockController**: Development implementation for testing
-- **Robot Model**: High-level orchestration and business logic
-- **Sinatra App**: HTTP API and web interface
-
-This architecture makes it easy to:
-- Test without hardware
-- Swap control implementations (GPIO → GamePad)
-- Add authentication
-- Extend with new features
 
 ## Contributing
 
@@ -669,14 +702,6 @@ Pull requests are welcome! Please follow these guidelines:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Safety
-
-- Always test in a safe environment
-- Keep the emergency stop button accessible
-- Monitor battery levels
-- Use appropriate voltage regulators
-- Ensure proper motor driver heat dissipation
 
 ## Credits
 
