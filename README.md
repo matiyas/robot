@@ -61,9 +61,10 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 |-------|----------|----------------|-------------|--------|
 | Left Wheel | Forward | GPIO 17 | IN1 | OUT1 |
 | Left Wheel | Backward | GPIO 18 | IN2 | OUT2 |
+| Left Wheel | PWM Enable | GPIO 12 | EEP | - |
 | Right Wheel | Forward | GPIO 22 | IN3 | OUT3 |
 | Right Wheel | Backward | GPIO 23 | IN4 | OUT4 |
-| Both | PWM Enable | GPIO 12 | EEP | - |
+| Right Wheel | PWM Enable | GPIO 13 | EEP | - |
 
 ### DRV8833 #2: Turret Motor
 
@@ -368,6 +369,12 @@ fetch('http://PI_IP/api/v1/move', {
 Production: `http://<PI_IP_ADDRESS>`
 Development: `http://localhost:4567`
 
+### Interactive Documentation
+
+Swagger UI is available at `/docs` for interactive API exploration:
+- Development: `http://localhost:4567/docs`
+- Production: `http://<PI_IP_ADDRESS>/docs`
+
 ### Endpoints
 
 #### Move Robot
@@ -438,7 +445,7 @@ GET /api/v1/status
   "success": true,
   "connected": true,
   "gpio_enabled": true,
-  "camera_url": "http://192.168.1.100:8081/stream"
+  "camera_url": "http://192.168.1.100:8081"
 }
 ```
 
@@ -452,7 +459,7 @@ GET /api/v1/camera
 ```json
 {
   "success": true,
-  "stream_url": "http://192.168.1.100:8081/stream"
+  "stream_url": "http://192.168.1.100:8081"
 }
 ```
 
@@ -482,9 +489,9 @@ Edit `config/settings.yml`:
 ```yaml
 production:
   host: '0.0.0.0'
-  port: 80
+  port: 4567
   gpio_enabled: true
-  camera_url: 'http://localhost:8081/stream'
+  camera_url: 'http://localhost:8081'
   movement_timeout: 5000  # Max movement duration (ms)
   turret_timeout: 2000    # Max turret rotation duration (ms)
   log_level: 'info'
@@ -588,7 +595,8 @@ robot/
 │   ├── services/
 │   │   ├── control_interface.rb  # Abstract controller
 │   │   ├── gpio_controller.rb    # GPIO implementation
-│   │   └── mock_controller.rb    # Development mock
+│   │   ├── mock_controller.rb    # Development mock
+│   │   └── pwm_ramper.rb         # PWM soft-start implementation
 │   └── helpers/
 │       └── api_helpers.rb        # API utilities
 ├── lib/
@@ -596,6 +604,8 @@ robot/
 │   └── safety_handler.rb         # Safety mechanisms
 ├── public/
 │   ├── css/style.css             # Responsive styles
+│   ├── images/                   # Static images
+│   ├── openapi.yaml              # OpenAPI specification
 │   └── js/
 │       ├── api-client.js         # API wrapper
 │       └── robot-controller.js   # UI controller
