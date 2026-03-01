@@ -38,7 +38,7 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 - **Web Control Panel**: Responsive UI that works on desktop and mobile devices
 - **Real-time Camera Streaming**: MJPEG streaming from CSI camera module
 - **JSON API**: RESTful API for mobile app integration (iOS/Android)
-- **GPIO Motor Control**: DRV8833 dual H-bridge motor drivers for 3 motors
+- **GPIO Motor Control**: DRV8833 dual H-bridge motor driver for wheels, SG90 servo for turret
 - **Safety Mechanisms**: Auto-stop, emergency stop, and graceful shutdown
 - **Development Mode**: Mock controller for testing without GPIO hardware
 - **PWM Soft-Start**: Linear motor ramp-up prevents circuit overloads and Pi resets
@@ -47,8 +47,9 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 ## Hardware Requirements
 
 - Raspberry Pi Zero 2W
-- 2x DRV8833 dual H-bridge motor driver boards
-- 3x 3V brush motors class 130 (2 wheels + 1 turret)
+- 1x DRV8833 dual H-bridge motor driver board
+- 2x 3V brush motors class 130 (wheels)
+- SG90 micro servo (turret rotation)
 - CSI camera module (ribbon cable)
 - Power supply and battery for motors
 - Robot tank chassis
@@ -66,15 +67,22 @@ A web-based control system for a robot tank running on Raspberry Pi Zero 2W. Fea
 | Right Wheel | Backward | GPIO 23 | IN4 | OUT4 |
 | Right Wheel | PWM Enable | GPIO 13 | EEP | - |
 
-### DRV8833 #2: Turret Motor
+### SG90 Servo: Turret Rotation
 
-| Motor | Function | GPIO Pin (BCM) | DRV8833 Pin | Output |
-|-------|----------|----------------|-------------|--------|
-| Turret | Left Rotation | GPIO 27 | IN1 | OUT1 |
-| Turret | Right Rotation | GPIO 24 | IN2 | OUT2 |
-| Turret | PWM Enable | GPIO 19 | EEP | - |
+The turret uses an SG90 micro servo connected directly to the Raspberry Pi (no motor driver needed).
 
-### Power Connections (Both Controllers)
+| Wire Color | Function | Connect To |
+|------------|----------|------------|
+| Brown | Ground (GND) | Raspberry Pi GND |
+| Red | Power (VCC) | Raspberry Pi 5V |
+| Yellow | Signal (PWM) | GPIO 19 (BCM) |
+
+**Wiring Notes:**
+- The SG90 servo requires 5V power (not 3.3V)
+- GPIO 19 is a hardware PWM capable pin for precise servo control
+- Keep servo wires away from motor power lines to reduce interference
+
+### Power Connections (DRV8833)
 
 | DRV8833 Pin | Connect To |
 |-------------|------------|
