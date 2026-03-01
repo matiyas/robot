@@ -38,20 +38,24 @@ class ServoController
     @logger = logger || Logger.new($stdout)
     load_settings(settings)
     @current_angle = @default_angle
-    move_to(@current_angle)
+    move_to(@current_angle, smooth: false)
     @logger.info "ServoController initialized at #{@current_angle} degrees"
   end
 
-  # Moves servo to specific angle
+  # Moves servo to specific angle with smooth interpolation
   #
   # @param angle [Integer] Target angle in degrees (0-180)
+  # @param smooth [Boolean] Use smooth interpolation (default: true)
   #
   # @return [void]
-  def move_to(angle)
-    @current_angle = angle.clamp(@min_angle, @max_angle)
-    pulse = angle_to_pulse(@current_angle)
-    @pin.pwm.servo_pulsewidth = pulse
-    @logger.debug "Servo moved to #{@current_angle} degrees (pulse: #{pulse}µs)"
+  def move_to(angle, smooth: true)
+    target = angle.clamp(@min_angle, @max_angle)
+
+    if smooth && target != @current_angle
+      smooth_move(@current_angle, target)
+    else
+      set_angle_immediate(target)
+    end
   end
 
   # Steps servo left by configured step angle
@@ -127,6 +131,8 @@ class ServoController
     @max_angle = settings['servo_max_angle'] || 180
     @step_angle = settings['servo_step_angle'] || 10
     @default_angle = settings['servo_default_angle'] || 90
+    @smooth_step_degrees = settings['servo_smooth_step'] || 2
+    @smooth_step_delay_ms = settings['servo_smooth_delay_ms'] || 15
   end
 
   # Converts angle to pulse width in microseconds
@@ -142,5 +148,39 @@ class ServoController
     angle_range = @max_angle - @min_angle
     ratio = (angle - @min_angle).to_f / angle_range
     (@min_pulse + (ratio * pulse_range)).to_i
+  end
+
+  # Sets angle immediately without interpolation
+  #
+  # @param angle [Integer] Target angle in degrees
+  # @return [void]
+  #
+  # @api private
+  def set_angle_immediate(angle)
+    @current_angle = angle
+    pulse = angle_to_pulse(@current_angle)
+    @pin.pwm.servo_pulsewidth = pulse
+    @logger.debug "Servo moved to #{@current_angle} degrees (pulse: #{pulse}µs)"
+  end
+
+  # Smoothly interpolates servo from current to target angle
+  #
+  # @param from_angle [Integer] Starting angle
+  # @param to_angle [Integer] Target angle
+  # @return [void]
+  #
+  # @api private
+  def smooth_move(from_angle, to_angle)
+    direction = to_angle > from_angle ? 1 : -1
+    current = from_angle
+
+    while (direction.positive? && current < to_angle) || (direction.negative? && current > to_angle)
+      current += direction * @smooth_step_degrees
+      current = direction.positive? ? [current, to_angle].min : [current, to_angle].max
+      set_angle_immediate(current)
+      sleep(@smooth_step_delay_ms / 1000.0)
+    end
+
+    @logger.debug "Servo smoothly moved to #{@current_angle} degrees"
   end
 end
