@@ -196,7 +196,7 @@ class GpioManager
     end
 
     # Reset PWM duty cycles if available
-    @pwm_pins&.each_value { |pin| pin.pwm(0) }
+    @pwm_pins&.each_value { |pin| pin.pwm.dutycycle = 0 }
 
     # Release servo (stop PWM signal)
     @servo_pin&.set_servo_pulsewidth(0)
