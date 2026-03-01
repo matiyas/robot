@@ -6,7 +6,7 @@
 # - PWM frequency: 50Hz (20ms period)
 # - Pulse width: 0.5ms (0 degrees) to 2.4ms (180 degrees)
 #
-# This class uses pigpio's set_servo_pulsewidth() method which accepts
+# This class uses pigpio's pwm.servo_pulsewidth accessor which accepts
 # pulse width in microseconds directly, handling the 50Hz frequency internally.
 #
 # The servo position is controlled by pulse width:
@@ -50,7 +50,7 @@ class ServoController
   def move_to(angle)
     @current_angle = angle.clamp(@min_angle, @max_angle)
     pulse = angle_to_pulse(@current_angle)
-    @pin.set_servo_pulsewidth(pulse)
+    @pin.pwm.servo_pulsewidth = pulse
     @logger.debug "Servo moved to #{@current_angle} degrees (pulse: #{pulse}µs)"
   end
 
@@ -100,7 +100,7 @@ class ServoController
   #
   # @return [void]
   def release
-    @pin.set_servo_pulsewidth(0)
+    @pin.pwm.servo_pulsewidth = 0
     @logger.debug 'Servo released'
   end
 

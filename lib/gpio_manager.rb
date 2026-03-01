@@ -199,7 +199,7 @@ class GpioManager
     @pwm_pins&.each_value { |pin| pin.pwm.dutycycle = 0 }
 
     # Release servo (stop PWM signal)
-    @servo_pin&.set_servo_pulsewidth(0)
+    @servo_pin&.pwm&.servo_pulsewidth = 0
 
     @logger.debug 'All GPIO pins reset to safe state'
   end
