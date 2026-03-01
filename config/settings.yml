@@ -9,6 +9,14 @@ default: &default
   pwm_enabled: true
   pwm_frequency: 1000     # Hz (1kHz - quiet, good resolution for DC motors)
   pwm_ramp_duration: 500  # milliseconds to reach full power
+  # SG90 servo configuration
+  servo_enabled: true
+  servo_min_pulse: 500    # microseconds (0 degrees)
+  servo_max_pulse: 2400   # microseconds (180 degrees)
+  servo_min_angle: 0      # degrees
+  servo_max_angle: 180    # degrees
+  servo_default_angle: 90 # center position
+  servo_step_angle: 10    # degrees per left/right command
 
 development:
   <<: *default

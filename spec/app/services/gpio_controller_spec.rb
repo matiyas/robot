@@ -1,14 +1,25 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require_relative '../../../lib/gpio_manager'
 require_relative '../../../app/services/gpio_controller'
 require_relative '../../../app/services/pwm_ramper'
+require_relative '../../../app/services/servo_controller'
 
 RSpec.describe GpioController do
-  subject(:controller) { described_class.new(gpio_manager, test_logger) }
+  subject(:controller) { described_class.new(gpio_manager, test_logger, nil, servo_controller) }
 
   include_context 'with mocked GPIO pins'
   include_context 'with test logger'
+
+  let(:servo_controller) { instance_double(ServoController) }
+
+  before do
+    allow(servo_controller).to receive(:step_left)
+    allow(servo_controller).to receive(:step_right)
+    allow(servo_controller).to receive(:stop)
+    allow(servo_controller).to receive(:cleanup)
+  end
 
   it_behaves_like 'a controller implementing ControlInterface'
 
@@ -195,13 +206,8 @@ RSpec.describe GpioController do
   describe '#turret_left' do
     it_behaves_like 'a movement method', :turret_left
 
-    it 'sets turret motor IN1 LOW' do
-      expect(turret_motor[:in1]).to receive(:write).with(0)
-      controller.turret_left
-    end
-
-    it 'sets turret motor IN2 HIGH' do
-      expect(turret_motor[:in2]).to receive(:write).with(1)
+    it 'delegates to servo controller' do
+      expect(servo_controller).to receive(:step_left)
       controller.turret_left
     end
 
@@ -210,24 +216,17 @@ RSpec.describe GpioController do
       expect(logged_debug.any? { |msg| msg.include?('Turret rotating left') }).to be true
     end
 
-    context 'with duration' do
-      it 'calls auto_stop_after' do
-        expect(controller).to receive(:auto_stop_after).with(300)
-        controller.turret_left(duration: 300)
-      end
+    it 'ignores duration parameter' do
+      expect(controller).not_to receive(:auto_stop_after)
+      controller.turret_left(duration: 300)
     end
   end
 
   describe '#turret_right' do
     it_behaves_like 'a movement method', :turret_right
 
-    it 'sets turret motor IN1 HIGH' do
-      expect(turret_motor[:in1]).to receive(:write).with(1)
-      controller.turret_right
-    end
-
-    it 'sets turret motor IN2 LOW' do
-      expect(turret_motor[:in2]).to receive(:write).with(0)
+    it 'delegates to servo controller' do
+      expect(servo_controller).to receive(:step_right)
       controller.turret_right
     end
 
@@ -236,11 +235,9 @@ RSpec.describe GpioController do
       expect(logged_debug.any? { |msg| msg.include?('Turret rotating right') }).to be true
     end
 
-    context 'with duration' do
-      it 'calls auto_stop_after' do
-        expect(controller).to receive(:auto_stop_after).with(400)
-        controller.turret_right(duration: 400)
-      end
+    it 'ignores duration parameter' do
+      expect(controller).not_to receive(:auto_stop_after)
+      controller.turret_right(duration: 400)
     end
   end
 
@@ -267,9 +264,8 @@ RSpec.describe GpioController do
       controller.stop_motors
     end
 
-    it 'sets turret motor to coast (IN1 LOW, IN2 LOW)' do
-      expect(turret_motor[:in1]).to receive(:write).with(0)
-      expect(turret_motor[:in2]).to receive(:write).with(0)
+    it 'stops servo controller' do
+      expect(servo_controller).to receive(:stop)
       controller.stop_motors
     end
 
@@ -301,6 +297,11 @@ RSpec.describe GpioController do
 
     it 'calls stop_motors' do
       expect(controller).to receive(:stop_motors)
+      controller.cleanup
+    end
+
+    it 'calls servo controller cleanup' do
+      expect(servo_controller).to receive(:cleanup)
       controller.cleanup
     end
 
@@ -501,7 +502,7 @@ RSpec.describe GpioController do
   end
 
   describe 'PWM integration' do
-    subject(:controller_with_pwm) { described_class.new(gpio_manager, test_logger, pwm_ramper) }
+    subject(:controller_with_pwm) { described_class.new(gpio_manager, test_logger, pwm_ramper, servo_controller) }
 
     let(:pwm_ramper) { instance_double(PwmRamper) }
 
@@ -516,9 +517,9 @@ RSpec.describe GpioController do
         expect(controller_with_pwm.instance_variable_get(:@pwm_ramper)).to eq(pwm_ramper)
       end
 
-      it 'logs initialization with PWM enabled' do
-        described_class.new(gpio_manager, test_logger, pwm_ramper)
-        expect(logged_info.any? { |msg| msg.include?('PWM soft-start') }).to be true
+      it 'logs initialization with PWM and servo enabled' do
+        described_class.new(gpio_manager, test_logger, pwm_ramper, servo_controller)
+        expect(logged_info.any? { |msg| msg.include?('PWM soft-start') && msg.include?('servo turret') }).to be true
       end
     end
 
@@ -555,15 +556,17 @@ RSpec.describe GpioController do
     end
 
     describe '#turret_left' do
-      it 'triggers PWM ramp for turret motor' do
-        expect(pwm_ramper).to receive(:ramp_up).with(:turret)
+      it 'uses servo controller (no PWM ramp)' do
+        expect(pwm_ramper).not_to receive(:ramp_up)
+        expect(servo_controller).to receive(:step_left)
         controller_with_pwm.turret_left
       end
     end
 
     describe '#turret_right' do
-      it 'triggers PWM ramp for turret motor' do
-        expect(pwm_ramper).to receive(:ramp_up).with(:turret)
+      it 'uses servo controller (no PWM ramp)' do
+        expect(pwm_ramper).not_to receive(:ramp_up)
+        expect(servo_controller).to receive(:step_right)
         controller_with_pwm.turret_right
       end
     end
@@ -578,15 +581,17 @@ RSpec.describe GpioController do
   end
 
   describe 'backward compatibility (without PWM)' do
-    subject(:controller_without_pwm) { described_class.new(gpio_manager, test_logger, nil) }
+    subject(:controller_without_pwm) { described_class.new(gpio_manager, test_logger, nil, servo_controller) }
 
     it 'works without PWM ramper' do
       expect { controller_without_pwm.move_forward }.not_to raise_error
     end
 
-    it 'does not log PWM in initialization' do
-      described_class.new(gpio_manager, test_logger, nil)
-      expect(logged_info.none? { |msg| msg.include?('PWM') }).to be true
+    it 'logs only servo turret in initialization' do
+      described_class.new(gpio_manager, test_logger, nil, servo_controller)
+      messages = logged_info.select { |msg| msg.include?('GpioController initialized') }
+      expect(messages.any? { |msg| msg.include?('servo turret') }).to be true
+      expect(messages.none? { |msg| msg.include?('PWM soft-start') }).to be true
     end
 
     it 'movement methods work without PWM' do

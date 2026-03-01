@@ -1,5 +1,5 @@
 # GPIO Pin Mapping (BCM numbering)
-# Hardware: 2x DRV8833 motor drivers, 3x 3V brush motors class 130
+# Hardware: 2x DRV8833 motor drivers for wheels, SG90 servo for turret
 
 motor_left:
   in1: 17  # Forward direction
@@ -11,12 +11,12 @@ motor_right:
   in2: 23  # Backward direction
   enable: 13  # Future: PWM speed control (hardware PWM capable)
 
-motor_turret:
-  in1: 27  # Left rotation
-  in2: 24  # Right rotation
-  enable: 19  # Future: PWM speed control (hardware PWM capable)
+# Turret servo (SG90)
+# Direct GPIO control - no DRV8833 driver needed
+servo_turret:
+  signal: 19  # PWM signal pin (hardware PWM capable)
 
-# DRV8833 Truth Table (per motor):
+# DRV8833 Truth Table (per wheel motor):
 # IN1=LOW,  IN2=LOW   -> Coast (motor off)
 # IN1=LOW,  IN2=HIGH  -> Backward/CCW
 # IN1=HIGH, IN2=LOW   -> Forward/CW

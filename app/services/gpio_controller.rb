@@ -2,11 +2,11 @@
 
 require_relative 'control_interface'
 
-# GPIO controller for DRV8833 dual H-bridge motor drivers
+# GPIO controller for DRV8833 dual H-bridge motor drivers and SG90 servo
 #
 # This class provides hardware control for a robot tank using Raspberry Pi
-# GPIO pins and DRV8833 motor driver ICs. It controls three independent motors:
-# left wheel, right wheel, and camera turret.
+# GPIO pins. It controls two wheel motors via DRV8833 motor drivers and
+# an SG90 servo for turret positioning.
 #
 # The DRV8833 uses two input pins (IN1, IN2) per motor with the following
 # truth table:
@@ -29,7 +29,8 @@ require_relative 'control_interface'
 # @example Initialize controller
 #   gpio_manager = GpioManager.new('config/gpio_pins.yml', logger)
 #   pwm_ramper = PwmRamper.new(gpio_manager.pwm_pins, settings, logger)
-#   controller = GpioController.new(gpio_manager, logger, pwm_ramper)
+#   servo = ServoController.new(gpio_manager.servo_pin, settings, logger)
+#   controller = GpioController.new(gpio_manager, logger, pwm_ramper, servo)
 #
 # @example Move forward for 1 second
 #   controller.move_forward(duration: 1000)
@@ -43,15 +44,20 @@ class GpioController < ControlInterface
   # @param gpio_manager [GpioManager] Initialized GPIO manager with configured pins
   # @param logger [Logger, nil] Logger instance for debugging (default: stdout)
   # @param pwm_ramper [PwmRamper, nil] PWM ramper for soft-start (nil for instant-on)
+  # @param servo_controller [ServoController, nil] Servo controller for turret
   #
   # @return [GpioController] A new GPIO controller instance
-  def initialize(gpio_manager, logger = nil, pwm_ramper = nil) # rubocop:disable Lint/MissingSuper
+  def initialize(gpio_manager, logger = nil, pwm_ramper = nil, servo_controller = nil) # rubocop:disable Lint/MissingSuper
     @gpio = gpio_manager
     @logger = logger || Logger.new($stdout)
     @pwm_ramper = pwm_ramper
+    @servo = servo_controller
     @movement_thread = nil
-    pwm_status = @pwm_ramper ? ' with PWM soft-start' : nil
-    @logger.info "GpioController initialized#{pwm_status}"
+    features = []
+    features << 'PWM soft-start' if @pwm_ramper
+    features << 'servo turret' if @servo
+    feature_str = features.empty? ? '' : " with #{features.join(', ')}"
+    @logger.info "GpioController initialized#{feature_str}"
   end
 
   # Moves both motors forward
@@ -120,34 +126,36 @@ class GpioController < ControlInterface
     auto_stop_after(duration) if duration
   end
 
-  # Rotates the turret motor to the left
+  # Rotates the turret to the left
   #
-  # @param duration [Integer, nil] Duration in milliseconds (nil for continuous)
+  # For servo control, steps the servo left by configured step angle.
+  # The duration parameter is ignored for servo control.
+  #
+  # @param duration [Integer, nil] Duration in milliseconds (ignored for servo)
   #
   # @return [void]
-  def turret_left(duration: nil)
+  def turret_left(duration: nil) # rubocop:disable Lint/UnusedMethodArgument
     @logger.debug 'Turret rotating left'
-    set_motor_direction(@gpio.turret_motor, :backward)
-    start_pwm_ramp(%i[turret])
-    auto_stop_after(duration) if duration
+    @servo.step_left
   end
 
-  # Rotates the turret motor to the right
+  # Rotates the turret to the right
   #
-  # @param duration [Integer, nil] Duration in milliseconds (nil for continuous)
+  # For servo control, steps the servo right by configured step angle.
+  # The duration parameter is ignored for servo control.
+  #
+  # @param duration [Integer, nil] Duration in milliseconds (ignored for servo)
   #
   # @return [void]
-  def turret_right(duration: nil)
+  def turret_right(duration: nil) # rubocop:disable Lint/UnusedMethodArgument
     @logger.debug 'Turret rotating right'
-    set_motor_direction(@gpio.turret_motor, :forward)
-    start_pwm_ramp(%i[turret])
-    auto_stop_after(duration) if duration
+    @servo.step_right
   end
 
   # Stops all motors immediately
   #
-  # Cancels any pending auto-stop timer and sets all motors to coast mode
-  # (both pins LOW), allowing them to freely spin down.
+  # Cancels any pending auto-stop timer and sets wheel motors to coast mode
+  # (both pins LOW), allowing them to freely spin down. Servo holds position.
   #
   # @return [void]
   def stop_motors
@@ -158,18 +166,19 @@ class GpioController < ControlInterface
     @pwm_ramper&.stop_all
     set_motor_direction(@gpio.left_motor, :coast)
     set_motor_direction(@gpio.right_motor, :coast)
-    set_motor_direction(@gpio.turret_motor, :coast)
+    @servo&.stop
   end
 
   # Cleans up GPIO resources
   #
-  # Stops all motors and delegates cleanup to the GPIO manager, which
-  # resets all pins to safe state.
+  # Stops all motors, cleans up servo, and delegates cleanup to the
+  # GPIO manager, which resets all pins to safe state.
   #
   # @return [void]
   def cleanup
     @logger.info 'GpioController cleanup'
     stop_motors
+    @servo&.cleanup
     @gpio.cleanup
   end
 

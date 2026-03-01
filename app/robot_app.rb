@@ -11,6 +11,7 @@ require_relative 'services/control_interface'
 require_relative 'services/mock_controller'
 require_relative 'services/gpio_controller'
 require_relative 'services/pwm_ramper'
+require_relative 'services/servo_controller'
 require_relative 'models/robot'
 require_relative 'helpers/api_helpers'
 
@@ -38,6 +39,33 @@ require_relative 'helpers/api_helpers'
 # @see MockController Development mock implementation
 class RobotApp < Sinatra::Base
   helpers ApiHelpers
+
+  # Initializes the appropriate controller based on configuration
+  def self.init_controller(config, logger)
+    return MockController.new(logger, pwm_enabled: config['pwm_enabled']) unless config['gpio_enabled']
+
+    logger.info 'Initializing GPIO controller'
+    gpio_manager = GpioManager.new(File.join(__dir__, '..', 'config', 'gpio_pins.yml'), logger)
+    pwm_ramper = init_pwm_ramper(config, gpio_manager, logger)
+    servo_controller = init_servo_controller(config, gpio_manager, logger)
+    GpioController.new(gpio_manager, logger, pwm_ramper, servo_controller)
+  end
+
+  # Initializes PWM ramper if enabled
+  def self.init_pwm_ramper(config, gpio_manager, logger)
+    return unless config['pwm_enabled'] && gpio_manager.pwm_pins
+
+    logger.info 'PWM soft-start enabled'
+    PwmRamper.new(gpio_manager.pwm_pins, config, logger)
+  end
+
+  # Initializes servo controller if enabled
+  def self.init_servo_controller(config, gpio_manager, logger)
+    return unless config['servo_enabled'] && gpio_manager.servo_pin
+
+    logger.info 'Servo turret control enabled'
+    ServoController.new(gpio_manager.servo_pin, config, logger)
+  end
 
   # Application configuration block
   #
@@ -71,23 +99,7 @@ class RobotApp < Sinatra::Base
     set :logger, logger
 
     # Initialize controller based on configuration
-    controller =
-      if config['gpio_enabled']
-        logger.info 'Initializing GPIO controller'
-        gpio_manager = GpioManager.new(File.join(__dir__, '..', 'config', 'gpio_pins.yml'), logger)
-
-        # Create PWM ramper if enabled and PWM pins are available
-        pwm_ramper =
-          if config['pwm_enabled'] && gpio_manager.pwm_pins
-            logger.info 'PWM soft-start enabled'
-            PwmRamper.new(gpio_manager.pwm_pins, config, logger)
-          end
-
-        GpioController.new(gpio_manager, logger, pwm_ramper)
-      else
-        logger.info 'Initializing Mock controller (GPIO disabled)'
-        MockController.new(logger, pwm_enabled: config['pwm_enabled'])
-      end
+    controller = init_controller(config, logger)
 
     # Initialize robot
     robot = Robot.new(controller, config, logger)

@@ -17,27 +17,23 @@ RSpec.shared_context 'with mocked GPIO pins' do
     }
   end
 
-  let(:turret_motor) do
-    {
-      in1: instance_double(Pigpio::IF::GPIO, write: nil),
-      in2: instance_double(Pigpio::IF::GPIO, write: nil)
-    }
-  end
-
   let(:pwm_pins) do
     {
       left: instance_double(Pigpio::IF::GPIO, pwm: nil),
-      right: instance_double(Pigpio::IF::GPIO, pwm: nil),
-      turret: instance_double(Pigpio::IF::GPIO, pwm: nil)
+      right: instance_double(Pigpio::IF::GPIO, pwm: nil)
     }
+  end
+
+  let(:servo_pin) do
+    instance_double(Pigpio::IF::GPIO, set_servo_pulsewidth: nil)
   end
 
   before do
     allow(gpio_manager).to receive_messages(
       left_motor: left_motor,
       right_motor: right_motor,
-      turret_motor: turret_motor,
-      pwm_pins: pwm_pins
+      pwm_pins: pwm_pins,
+      servo_pin: servo_pin
     )
     allow(gpio_manager).to receive(:cleanup)
     allow(gpio_manager).to receive(:stop_motors)

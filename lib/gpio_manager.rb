@@ -15,9 +15,10 @@ require 'pigpio'
 # - Setting initial safe state (all pins LOW)
 # - Cleanup and reset on shutdown
 #
-# Each motor uses two GPIO pins (IN1 and IN2) connected to a DRV8833
-# H-bridge driver. The manager groups these pins into motor hashes for
-# easy access by the GpioController.
+# Each wheel motor uses two GPIO pins (IN1 and IN2) connected to a DRV8833
+# H-bridge driver. The turret uses a single GPIO pin for SG90 servo control.
+# The manager groups these pins into motor hashes for easy access by the
+# GpioController.
 #
 # Configuration file format (config/gpio_pins.yml):
 #   motor_left:
@@ -26,9 +27,8 @@ require 'pigpio'
 #   motor_right:
 #     in1: 22
 #     in2: 23
-#   motor_turret:
-#     in1: 27
-#     in2: 24
+#   servo_turret:
+#     signal: 19
 #
 # @example Initialize GPIO manager
 #   gpio_manager = GpioManager.new('config/gpio_pins.yml', logger)
@@ -45,12 +45,12 @@ class GpioManager
   # @!attribute [r] right_motor
   #   @return [Hash] Right motor pins with keys :in1 and :in2
   #
-  # @!attribute [r] turret_motor
-  #   @return [Hash] Turret motor pins with keys :in1 and :in2
-  #
   # @!attribute [r] pwm_pins
   #   @return [Hash, nil] PWM pins keyed by motor symbol, or nil if PWM unavailable
-  attr_reader :left_motor, :right_motor, :turret_motor, :pwm_pins
+  #
+  # @!attribute [r] servo_pin
+  #   @return [Pigpio::IF::GPIO, nil] Servo signal pin, or nil if not configured
+  attr_reader :left_motor, :right_motor, :pwm_pins, :servo_pin
 
   # Initializes the GPIO manager and all pins
   #
@@ -99,14 +99,11 @@ class GpioManager
       in2: setup_output_pin(@config['motor_right']['in2'])
     }
 
-    # Initialize turret motor pins
-    @turret_motor = {
-      in1: setup_output_pin(@config['motor_turret']['in1']),
-      in2: setup_output_pin(@config['motor_turret']['in2'])
-    }
-
-    # Initialize PWM pins (optional - graceful degradation if not present)
+    # Initialize PWM pins for wheel motors (optional - graceful degradation)
     @pwm_pins = initialize_pwm_pins
+
+    # Initialize servo pin for turret (optional - graceful degradation)
+    @servo_pin = initialize_servo_pin
 
     # Set all pins to LOW (coast) initially
     reset_all_pins
@@ -125,7 +122,7 @@ class GpioManager
     pin
   end
 
-  # Initializes PWM pins for motor speed control
+  # Initializes PWM pins for wheel motor speed control
   #
   # Reads enable pin numbers from config and creates GPIO objects for PWM.
   # Returns nil if no enable pins are configured or initialization fails.
@@ -136,11 +133,34 @@ class GpioManager
   # @api private
   def initialize_pwm_pins
     pins = {}
-    { left: 'motor_left', right: 'motor_right', turret: 'motor_turret' }.each do |motor_sym, config_key|
+    { left: 'motor_left', right: 'motor_right' }.each do |motor_sym, config_key|
       pin = setup_pwm_pin(motor_sym, config_key)
       pins[motor_sym] = pin if pin
     end
     pins.empty? ? nil : pins
+  end
+
+  # Initializes servo signal pin for turret control
+  #
+  # Reads servo pin number from config and creates GPIO object.
+  # Returns nil if not configured or initialization fails.
+  #
+  # @return [Pigpio::IF::GPIO, nil] Servo pin or nil if unavailable
+  #
+  # @api private
+  def initialize_servo_pin
+    servo_config = @config['servo_turret']
+    return nil unless servo_config
+
+    signal_pin = servo_config['signal']
+    return nil unless signal_pin
+
+    pin = setup_output_pin(signal_pin)
+    @logger.info "Servo initialized on GPIO #{signal_pin}"
+    pin
+  rescue StandardError => e
+    @logger.warn "Servo initialization failed: #{e.message}"
+    nil
   end
 
   # Sets up a single PWM pin for a motor
@@ -162,15 +182,15 @@ class GpioManager
     nil
   end
 
-  # Resets all GPIO pins to LOW (coast mode)
+  # Resets all GPIO pins to safe state
   #
-  # Sets both input pins for all motors to LOW, putting them in coast mode
-  # where motors can freely spin down. Also resets PWM duty cycles to 0
-  # if PWM pins are available. This is the safe default state.
+  # Sets both input pins for wheel motors to LOW (coast mode) where motors
+  # can freely spin down. Releases servo by setting pulsewidth to 0.
+  # Also resets PWM duty cycles to 0 if PWM pins are available.
   #
   # @return [void]
   def reset_all_pins
-    [@left_motor, @right_motor, @turret_motor].each do |motor|
+    [@left_motor, @right_motor].each do |motor|
       motor[:in1].write(0)
       motor[:in2].write(0)
     end
@@ -178,7 +198,10 @@ class GpioManager
     # Reset PWM duty cycles if available
     @pwm_pins&.each_value { |pin| pin.pwm(0) }
 
-    @logger.debug 'All GPIO pins reset to LOW'
+    # Release servo (stop PWM signal)
+    @servo_pin&.set_servo_pulsewidth(0)
+
+    @logger.debug 'All GPIO pins reset to safe state'
   end
 
   # Cleans up GPIO resources

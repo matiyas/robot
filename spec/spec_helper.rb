@@ -26,6 +26,8 @@ module Pigpio
       def write(_value); end
 
       def pwm(_duty_cycle); end
+
+      def set_servo_pulsewidth(_pulse_width); end # rubocop:disable Naming/AccessorMethodName
     end
   end
 

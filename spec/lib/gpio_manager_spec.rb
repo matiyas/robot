@@ -13,7 +13,7 @@ RSpec.describe GpioManager do
     {
       'motor_left' => { 'in1' => 17, 'in2' => 18 },
       'motor_right' => { 'in1' => 22, 'in2' => 23 },
-      'motor_turret' => { 'in1' => 27, 'in2' => 24 }
+      'servo_turret' => { 'signal' => 19 }
     }
   end
 
@@ -23,8 +23,9 @@ RSpec.describe GpioManager do
   let(:left_in2_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
   let(:right_in1_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
   let(:right_in2_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
-  let(:turret_in1_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
-  let(:turret_in2_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
+  let(:servo_pin) do
+    instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, set_servo_pulsewidth: nil)
+  end
 
   before do
     # Mock YAML loading
@@ -40,8 +41,7 @@ RSpec.describe GpioManager do
     allow(mock_pigpio).to receive(:gpio).with(18).and_return(left_in2_pin)
     allow(mock_pigpio).to receive(:gpio).with(22).and_return(right_in1_pin)
     allow(mock_pigpio).to receive(:gpio).with(23).and_return(right_in2_pin)
-    allow(mock_pigpio).to receive(:gpio).with(27).and_return(turret_in1_pin)
-    allow(mock_pigpio).to receive(:gpio).with(24).and_return(turret_in2_pin)
+    allow(mock_pigpio).to receive(:gpio).with(19).and_return(servo_pin)
   end
 
   describe '#initialize' do
@@ -81,45 +81,41 @@ RSpec.describe GpioManager do
       described_class.new(config_path, test_logger)
     end
 
-    it 'creates turret motor IN1 pin with correct number' do
-      expect(mock_pigpio).to receive(:gpio).with(27).and_return(turret_in1_pin)
+    it 'creates servo pin with correct number' do
+      expect(mock_pigpio).to receive(:gpio).with(19).and_return(servo_pin)
       described_class.new(config_path, test_logger)
     end
 
-    it 'creates turret motor IN2 pin with correct number' do
-      expect(mock_pigpio).to receive(:gpio).with(24).and_return(turret_in2_pin)
-      described_class.new(config_path, test_logger)
-    end
-
-    it 'configures all pins as outputs' do
+    it 'configures wheel motor pins as outputs' do
       expect(left_in1_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
       expect(left_in2_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
       expect(right_in1_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
       expect(right_in2_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
-      expect(turret_in1_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
-      expect(turret_in2_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
       described_class.new(config_path, test_logger)
     end
 
-    it 'disables pull-up/down on all pins' do
+    it 'configures servo pin as output' do
+      expect(servo_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
+      described_class.new(config_path, test_logger)
+    end
+
+    it 'disables pull-up/down on wheel motor pins' do
       expect(left_in1_pin).to receive(:pud=).with(Pigpio::Constant::PI_PUD_OFF)
       expect(left_in2_pin).to receive(:pud=).with(Pigpio::Constant::PI_PUD_OFF)
       expect(right_in1_pin).to receive(:pud=).with(Pigpio::Constant::PI_PUD_OFF)
       expect(right_in2_pin).to receive(:pud=).with(Pigpio::Constant::PI_PUD_OFF)
-      expect(turret_in1_pin).to receive(:pud=).with(Pigpio::Constant::PI_PUD_OFF)
-      expect(turret_in2_pin).to receive(:pud=).with(Pigpio::Constant::PI_PUD_OFF)
       described_class.new(config_path, test_logger)
     end
 
     it 'calls reset_all_pins to set initial state' do
       described_class.new(config_path, test_logger)
-      # Verify all pins were set to LOW (0) during initialization
+      # Verify wheel motor pins were set to LOW (0) during initialization
       expect(left_in1_pin).to have_received(:write).with(0)
       expect(left_in2_pin).to have_received(:write).with(0)
       expect(right_in1_pin).to have_received(:write).with(0)
       expect(right_in2_pin).to have_received(:write).with(0)
-      expect(turret_in1_pin).to have_received(:write).with(0)
-      expect(turret_in2_pin).to have_received(:write).with(0)
+      # Verify servo was released (pulsewidth = 0)
+      expect(servo_pin).to have_received(:set_servo_pulsewidth).with(0)
     end
 
     it 'logs initialization' do
@@ -168,30 +164,25 @@ RSpec.describe GpioManager do
     end
   end
 
-  describe '#turret_motor' do
-    it 'returns hash with :in1 and :in2 keys' do
-      expect(gpio_manager.turret_motor).to be_a(Hash)
-      expect(gpio_manager.turret_motor.keys).to contain_exactly(:in1, :in2)
+  describe '#servo_pin' do
+    it 'returns the servo pin' do
+      expect(gpio_manager.servo_pin).to eq(servo_pin)
     end
 
-    it 'returns turret motor IN1 pin' do
-      expect(gpio_manager.turret_motor[:in1]).to eq(turret_in1_pin)
-    end
-
-    it 'returns turret motor IN2 pin' do
-      expect(gpio_manager.turret_motor[:in2]).to eq(turret_in2_pin)
+    it 'logs servo initialization' do
+      described_class.new(config_path, test_logger)
+      expect(logged_info.any? { |msg| msg.include?('Servo initialized on GPIO 19') }).to be true
     end
   end
 
   describe '#reset_all_pins' do
     before do
-      # Clear previous write calls from initialization
+      # Clear previous calls from initialization
       allow(left_in1_pin).to receive(:write)
       allow(left_in2_pin).to receive(:write)
       allow(right_in1_pin).to receive(:write)
       allow(right_in2_pin).to receive(:write)
-      allow(turret_in1_pin).to receive(:write)
-      allow(turret_in2_pin).to receive(:write)
+      allow(servo_pin).to receive(:set_servo_pulsewidth)
     end
 
     it 'sets all left motor pins to LOW' do
@@ -206,15 +197,14 @@ RSpec.describe GpioManager do
       gpio_manager.reset_all_pins
     end
 
-    it 'sets all turret motor pins to LOW' do
-      expect(turret_in1_pin).to receive(:write).with(0)
-      expect(turret_in2_pin).to receive(:write).with(0)
+    it 'releases servo by setting pulsewidth to 0' do
+      expect(servo_pin).to receive(:set_servo_pulsewidth).with(0)
       gpio_manager.reset_all_pins
     end
 
     it 'logs debug message' do
       gpio_manager.reset_all_pins
-      expect(logged_debug.any? { |msg| msg.include?('All GPIO pins reset to LOW') }).to be true
+      expect(logged_debug.any? { |msg| msg.include?('All GPIO pins reset to safe state') }).to be true
     end
 
     it 'can be called multiple times safely' do
@@ -230,21 +220,19 @@ RSpec.describe GpioManager do
       gpio_manager.stop_motors
     end
 
-    it 'sets all pins to LOW' do
-      # Allow pins to receive write messages
+    it 'sets wheel motor pins to LOW and releases servo' do
+      # Allow pins to receive messages
       allow(left_in1_pin).to receive(:write)
       allow(left_in2_pin).to receive(:write)
       allow(right_in1_pin).to receive(:write)
       allow(right_in2_pin).to receive(:write)
-      allow(turret_in1_pin).to receive(:write)
-      allow(turret_in2_pin).to receive(:write)
+      allow(servo_pin).to receive(:set_servo_pulsewidth)
 
       expect(left_in1_pin).to receive(:write).with(0)
       expect(left_in2_pin).to receive(:write).with(0)
       expect(right_in1_pin).to receive(:write).with(0)
       expect(right_in2_pin).to receive(:write).with(0)
-      expect(turret_in1_pin).to receive(:write).with(0)
-      expect(turret_in2_pin).to receive(:write).with(0)
+      expect(servo_pin).to receive(:set_servo_pulsewidth).with(0)
       gpio_manager.stop_motors
     end
   end
@@ -347,31 +335,28 @@ RSpec.describe GpioManager do
         {
           'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
           'motor_right' => { 'in1' => 22, 'in2' => 23, 'enable' => 13 },
-          'motor_turret' => { 'in1' => 27, 'in2' => 24, 'enable' => 19 }
+          'servo_turret' => { 'signal' => 19 }
         }
       end
 
       let(:left_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
       let(:right_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
-      let(:turret_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
 
       before do
         allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_with_pwm)
         allow(mock_pigpio).to receive(:gpio).with(12).and_return(left_pwm_pin)
         allow(mock_pigpio).to receive(:gpio).with(13).and_return(right_pwm_pin)
-        allow(mock_pigpio).to receive(:gpio).with(19).and_return(turret_pwm_pin)
       end
 
-      it 'returns hash with PWM pins for all motors' do
+      it 'returns hash with PWM pins for wheel motors' do
         manager = described_class.new(config_path, test_logger)
         expect(manager.pwm_pins).to be_a(Hash)
-        expect(manager.pwm_pins.keys).to contain_exactly(:left, :right, :turret)
+        expect(manager.pwm_pins.keys).to contain_exactly(:left, :right)
       end
 
       it 'initializes PWM pins as outputs' do
         expect(left_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
         expect(right_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
-        expect(turret_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
         described_class.new(config_path, test_logger)
       end
 
@@ -379,7 +364,6 @@ RSpec.describe GpioManager do
         described_class.new(config_path, test_logger)
         expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('left') }).to be true
         expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('right') }).to be true
-        expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('turret') }).to be true
       end
 
       it 'resets PWM duty cycles in reset_all_pins' do
@@ -387,7 +371,6 @@ RSpec.describe GpioManager do
 
         expect(left_pwm_pin).to receive(:pwm).with(0)
         expect(right_pwm_pin).to receive(:pwm).with(0)
-        expect(turret_pwm_pin).to receive(:pwm).with(0)
         manager.reset_all_pins
       end
     end
@@ -408,7 +391,7 @@ RSpec.describe GpioManager do
         {
           'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
           'motor_right' => { 'in1' => 22, 'in2' => 23 },
-          'motor_turret' => { 'in1' => 27, 'in2' => 24 }
+          'servo_turret' => { 'signal' => 19 }
         }
       end
 
@@ -433,7 +416,7 @@ RSpec.describe GpioManager do
         {
           'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
           'motor_right' => { 'in1' => 22, 'in2' => 23 },
-          'motor_turret' => { 'in1' => 27, 'in2' => 24 }
+          'servo_turret' => { 'signal' => 19 }
         }
       end
 
@@ -449,6 +432,24 @@ RSpec.describe GpioManager do
         expect(manager.pwm_pins).to be_a(Hash)
         expect(manager.pwm_pins.keys).to contain_exactly(:left)
       end
+    end
+  end
+
+  describe '#servo_pin when not configured' do
+    let(:gpio_config_no_servo) do
+      {
+        'motor_left' => { 'in1' => 17, 'in2' => 18 },
+        'motor_right' => { 'in1' => 22, 'in2' => 23 }
+      }
+    end
+
+    before do
+      allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_no_servo)
+    end
+
+    it 'returns nil when servo is not configured' do
+      manager = described_class.new(config_path, test_logger)
+      expect(manager.servo_pin).to be_nil
     end
   end
 end

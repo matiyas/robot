@@ -12,7 +12,8 @@ require_relative 'control_interface'
 # - CI/CD pipeline testing
 #
 # Instead of controlling GPIO pins, this controller logs all actions to
-# the logger. It simulates the timing behavior of real movements using background threads.
+# the logger. It simulates the timing behavior of real movements using
+# background threads and tracks turret servo position.
 #
 # The MockController is automatically used when gpio_enabled is false in
 # the settings configuration.
@@ -29,6 +30,12 @@ require_relative 'control_interface'
 # @see ControlInterface Abstract base class
 # @see GpioController Real hardware implementation
 class MockController < ControlInterface
+  # Servo configuration for turret simulation
+  SERVO_MIN_ANGLE = 0
+  SERVO_MAX_ANGLE = 180
+  SERVO_DEFAULT_ANGLE = 90
+  SERVO_STEP_ANGLE = 10
+
   # Initializes the mock controller
   #
   # @param logger [Logger, nil] Logger instance for output (default: stdout)
@@ -38,6 +45,7 @@ class MockController < ControlInterface
   def initialize(logger = nil, pwm_enabled: false) # rubocop:disable Lint/MissingSuper
     @logger = logger || Logger.new($stdout)
     @pwm_enabled = pwm_enabled
+    @turret_angle = SERVO_DEFAULT_ANGLE
     pwm_status = @pwm_enabled ? ', PWM simulation enabled' : nil
     @logger.info "MockController initialized (no GPIO#{pwm_status})"
   end
@@ -94,30 +102,30 @@ class MockController < ControlInterface
     simulate_movement(duration) if duration
   end
 
-  # Simulates turret rotation to the left
+  # Simulates turret servo stepping left
   #
-  # Logs the turret left action and simulates movement timing if duration is specified.
+  # Steps the simulated turret servo left by SERVO_STEP_ANGLE degrees.
+  # Duration parameter is ignored (servo is position-based, not time-based).
   #
-  # @param duration [Integer, nil] Duration in milliseconds (nil for continuous)
+  # @param duration [Integer, nil] Duration in milliseconds (ignored for servo)
   #
   # @return [void]
-  def turret_left(duration: nil)
-    log_action('TURRET LEFT', duration)
-    log_pwm_ramp(%i[turret])
-    simulate_movement(duration) if duration
+  def turret_left(duration: nil) # rubocop:disable Lint/UnusedMethodArgument
+    @turret_angle = [SERVO_MIN_ANGLE, @turret_angle - SERVO_STEP_ANGLE].max
+    @logger.info "TURRET LEFT (now at #{@turret_angle} degrees)"
   end
 
-  # Simulates turret rotation to the right
+  # Simulates turret servo stepping right
   #
-  # Logs the turret right action and simulates movement timing if duration is specified.
+  # Steps the simulated turret servo right by SERVO_STEP_ANGLE degrees.
+  # Duration parameter is ignored (servo is position-based, not time-based).
   #
-  # @param duration [Integer, nil] Duration in milliseconds (nil for continuous)
+  # @param duration [Integer, nil] Duration in milliseconds (ignored for servo)
   #
   # @return [void]
-  def turret_right(duration: nil)
-    log_action('TURRET RIGHT', duration)
-    log_pwm_ramp(%i[turret])
-    simulate_movement(duration) if duration
+  def turret_right(duration: nil) # rubocop:disable Lint/UnusedMethodArgument
+    @turret_angle = [SERVO_MAX_ANGLE, @turret_angle + SERVO_STEP_ANGLE].min
+    @logger.info "TURRET RIGHT (now at #{@turret_angle} degrees)"
   end
 
   # Simulates stopping all motors

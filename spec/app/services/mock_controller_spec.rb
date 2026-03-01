@@ -129,40 +129,40 @@ RSpec.describe MockController do
   describe '#turret_left' do
     it_behaves_like 'a movement method', :turret_left
 
-    it 'logs TURRET LEFT action' do
+    it 'logs TURRET LEFT action with angle' do
       controller.turret_left
-      expect(logged_messages).to include(a_string_matching(/TURRET LEFT/))
+      expect(logged_messages).to include(a_string_matching(/TURRET LEFT.*degrees/))
     end
 
-    it 'logs duration when provided' do
+    it 'decreases angle by step amount' do
+      # Starting at default 90
+      controller.turret_left
+      expect(logged_messages).to include(a_string_matching(/now at 80 degrees/))
+    end
+
+    it 'ignores duration parameter (servo is position-based)' do
       controller.turret_left(duration: 300)
-      expect(logged_messages).to include(a_string_matching(/TURRET LEFT.*300ms/))
-    end
-
-    it 'simulates timing when duration provided' do
-      controller.turret_left(duration: 50)
-      sleep(0.1)
-      expect(logged_messages).to include(match(/Movement completed/))
+      expect(logged_messages).not_to include(a_string_matching(/Movement completed/))
     end
   end
 
   describe '#turret_right' do
     it_behaves_like 'a movement method', :turret_right
 
-    it 'logs TURRET RIGHT action' do
+    it 'logs TURRET RIGHT action with angle' do
       controller.turret_right
-      expect(logged_messages).to include(a_string_matching(/TURRET RIGHT/))
+      expect(logged_messages).to include(a_string_matching(/TURRET RIGHT.*degrees/))
     end
 
-    it 'logs duration when provided' do
+    it 'increases angle by step amount' do
+      # Starting at default 90
+      controller.turret_right
+      expect(logged_messages).to include(a_string_matching(/now at 100 degrees/))
+    end
+
+    it 'ignores duration parameter (servo is position-based)' do
       controller.turret_right(duration: 400)
-      expect(logged_messages).to include(a_string_matching(/TURRET RIGHT.*400ms/))
-    end
-
-    it 'simulates timing when duration provided' do
-      controller.turret_right(duration: 50)
-      sleep(0.1)
-      expect(logged_messages).to include(match(/Movement completed/))
+      expect(logged_messages).not_to include(a_string_matching(/Movement completed/))
     end
   end
 
@@ -209,7 +209,7 @@ RSpec.describe MockController do
     it 'can handle multiple concurrent movements' do
       controller.move_forward(duration: 100)
       controller.turn_left(duration: 100)
-      controller.turret_right(duration: 100)
+      controller.turn_right(duration: 100)
       sleep(0.15)
       completion_logs = logged_messages.count { |line| line.include?('Movement completed') }
       expect(completion_logs).to eq(3)
