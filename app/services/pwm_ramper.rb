@@ -83,7 +83,7 @@ class PwmRamper
     pwm_pin = @pwm_pins[motor]
     return unless pwm_pin
 
-    pwm_pin.pwm(duty_cycle)
+    pwm_pin.pwm.dutycycle = duty_cycle
     @logger.debug "PWM #{motor}: duty cycle set to #{duty_cycle}"
   end
 
@@ -145,7 +145,7 @@ class PwmRamper
     steps.times do |step|
       current_duty = ((step + 1) * duty_increment).to_i
       current_duty = [current_duty, max_duty].min
-      pwm_pin.pwm(current_duty)
+      pwm_pin.pwm.dutycycle = current_duty
       sleep(STEP_INTERVAL_MS / 1000.0)
     end
 
