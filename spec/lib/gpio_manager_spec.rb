@@ -19,12 +19,15 @@ RSpec.describe GpioManager do
 
   # Mock Pigpio classes
   let(:mock_pigpio) { instance_double(Pigpio::PigpioInstance) }
-  let(:left_in1_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
-  let(:left_in2_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
-  let(:right_in1_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
-  let(:right_in2_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil) }
+  let(:left_in1_pin) { instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil) }
+  let(:left_in2_pin) { instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil) }
+  let(:right_in1_pin) { instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil) }
+  let(:right_in2_pin) { instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil) }
+  let(:servo_pwm_object) { instance_double(Pigpio::PWM, 'servo_pulsewidth=': nil) }
   let(:servo_pin) do
-    instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, set_servo_pulsewidth: nil)
+    pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
+    allow(pin).to receive(:pwm).and_return(servo_pwm_object)
+    pin
   end
 
   before do
@@ -115,7 +118,7 @@ RSpec.describe GpioManager do
       expect(right_in1_pin).to have_received(:write).with(0)
       expect(right_in2_pin).to have_received(:write).with(0)
       # Verify servo was released (pulsewidth = 0)
-      expect(servo_pin).to have_received(:set_servo_pulsewidth).with(0)
+      expect(servo_pwm_object).to have_received(:servo_pulsewidth=).with(0)
     end
 
     it 'logs initialization' do
@@ -182,7 +185,7 @@ RSpec.describe GpioManager do
       allow(left_in2_pin).to receive(:write)
       allow(right_in1_pin).to receive(:write)
       allow(right_in2_pin).to receive(:write)
-      allow(servo_pin).to receive(:set_servo_pulsewidth)
+      allow(servo_pwm_object).to receive(:servo_pulsewidth=)
     end
 
     it 'sets all left motor pins to LOW' do
@@ -198,7 +201,7 @@ RSpec.describe GpioManager do
     end
 
     it 'releases servo by setting pulsewidth to 0' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(0)
+      expect(servo_pwm_object).to receive(:servo_pulsewidth=).with(0)
       gpio_manager.reset_all_pins
     end
 
@@ -226,13 +229,13 @@ RSpec.describe GpioManager do
       allow(left_in2_pin).to receive(:write)
       allow(right_in1_pin).to receive(:write)
       allow(right_in2_pin).to receive(:write)
-      allow(servo_pin).to receive(:set_servo_pulsewidth)
+      allow(servo_pwm_object).to receive(:servo_pulsewidth=)
 
       expect(left_in1_pin).to receive(:write).with(0)
       expect(left_in2_pin).to receive(:write).with(0)
       expect(right_in1_pin).to receive(:write).with(0)
       expect(right_in2_pin).to receive(:write).with(0)
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(0)
+      expect(servo_pwm_object).to receive(:servo_pulsewidth=).with(0)
       gpio_manager.stop_motors
     end
   end
@@ -339,8 +342,20 @@ RSpec.describe GpioManager do
         }
       end
 
-      let(:left_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
-      let(:right_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
+      let(:left_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
+      let(:right_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
+
+      let(:left_pwm_pin) do
+        pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
+        allow(pin).to receive(:pwm).and_return(left_pwm_obj)
+        pin
+      end
+
+      let(:right_pwm_pin) do
+        pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
+        allow(pin).to receive(:pwm).and_return(right_pwm_obj)
+        pin
+      end
 
       before do
         allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_with_pwm)
@@ -369,8 +384,8 @@ RSpec.describe GpioManager do
       it 'resets PWM duty cycles in reset_all_pins' do
         manager = described_class.new(config_path, test_logger)
 
-        expect(left_pwm_pin).to receive(:pwm).with(0)
-        expect(right_pwm_pin).to receive(:pwm).with(0)
+        expect(left_pwm_obj).to receive(:dutycycle=).with(0)
+        expect(right_pwm_obj).to receive(:dutycycle=).with(0)
         manager.reset_all_pins
       end
     end
@@ -420,7 +435,13 @@ RSpec.describe GpioManager do
         }
       end
 
-      let(:left_pwm_pin) { instance_double(Pigpio::IF::GPIO, 'mode=': nil, 'pud=': nil, write: nil, pwm: nil) }
+      let(:left_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
+
+      let(:left_pwm_pin) do
+        pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
+        allow(pin).to receive(:pwm).and_return(left_pwm_obj)
+        pin
+      end
 
       before do
         allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_partial_pwm)

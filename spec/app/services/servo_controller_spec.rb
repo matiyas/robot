@@ -8,7 +8,8 @@ RSpec.describe ServoController do
 
   include_context 'with test logger'
 
-  let(:servo_pin) { instance_double(Pigpio::IF::GPIO) }
+  let(:servo_pin) { instance_double(Pigpio::UserGPIO) }
+  let(:pwm_object) { instance_double(Pigpio::PWM) }
 
   let(:test_settings) do
     {
@@ -17,17 +18,20 @@ RSpec.describe ServoController do
       'servo_min_angle' => 0,
       'servo_max_angle' => 180,
       'servo_default_angle' => 90,
-      'servo_step_angle' => 10
+      'servo_step_angle' => 10,
+      'servo_smooth_step' => 10,
+      'servo_smooth_delay_ms' => 1
     }
   end
 
   before do
-    allow(servo_pin).to receive(:set_servo_pulsewidth)
+    allow(servo_pin).to receive(:pwm).and_return(pwm_object)
+    allow(pwm_object).to receive(:servo_pulsewidth=)
   end
 
   describe '#initialize' do
     it 'sets servo to default angle' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(kind_of(Integer))
+      expect(pwm_object).to receive(:servo_pulsewidth=).with(kind_of(Integer))
       described_class.new(servo_pin, test_settings, test_logger)
     end
 
@@ -45,7 +49,7 @@ RSpec.describe ServoController do
 
   describe '#move_to' do
     it 'sets servo to specified angle' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(kind_of(Integer))
+      expect(pwm_object).to receive(:servo_pulsewidth=).with(kind_of(Integer)).at_least(:once)
       controller.move_to(45)
       expect(controller.current_angle).to eq(45)
     end
@@ -61,17 +65,17 @@ RSpec.describe ServoController do
     end
 
     it 'converts angle to correct pulse width for 0 degrees' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(500)
+      expect(pwm_object).to receive(:servo_pulsewidth=).with(500).at_least(:once)
       controller.move_to(0)
     end
 
     it 'converts angle to correct pulse width for 180 degrees' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(2400)
+      expect(pwm_object).to receive(:servo_pulsewidth=).with(2400).at_least(:once)
       controller.move_to(180)
     end
 
     it 'converts angle to correct pulse width for 90 degrees' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(1450)
+      expect(pwm_object).to receive(:servo_pulsewidth=).with(1450).at_least(:once)
       controller.move_to(90)
     end
 
@@ -79,10 +83,17 @@ RSpec.describe ServoController do
       controller.move_to(45)
       expect(logged_debug.any? { |msg| msg.include?('Servo moved to 45 degrees') }).to be true
     end
+
+    context 'with smooth movement disabled' do
+      it 'moves directly without interpolation' do
+        controller.move_to(45, smooth: false)
+        expect(controller.current_angle).to eq(45)
+      end
+    end
   end
 
   describe '#step_left' do
-    before { controller.move_to(90) }
+    before { controller.move_to(90, smooth: false) }
 
     it 'decreases angle by step_angle' do
       controller.step_left
@@ -90,7 +101,7 @@ RSpec.describe ServoController do
     end
 
     it 'respects minimum angle' do
-      controller.move_to(5)
+      controller.move_to(5, smooth: false)
       controller.step_left
       expect(controller.current_angle).to eq(0)
     end
@@ -102,7 +113,7 @@ RSpec.describe ServoController do
   end
 
   describe '#step_right' do
-    before { controller.move_to(90) }
+    before { controller.move_to(90, smooth: false) }
 
     it 'increases angle by step_angle' do
       controller.step_right
@@ -110,7 +121,7 @@ RSpec.describe ServoController do
     end
 
     it 'respects maximum angle' do
-      controller.move_to(175)
+      controller.move_to(175, smooth: false)
       controller.step_right
       expect(controller.current_angle).to eq(180)
     end
@@ -123,7 +134,7 @@ RSpec.describe ServoController do
 
   describe '#center' do
     it 'moves to default angle' do
-      controller.move_to(45)
+      controller.move_to(45, smooth: false)
       controller.center
       expect(controller.current_angle).to eq(90)
     end
@@ -142,7 +153,7 @@ RSpec.describe ServoController do
 
   describe '#release' do
     it 'sets pulsewidth to 0' do
-      expect(servo_pin).to receive(:set_servo_pulsewidth).with(0)
+      expect(pwm_object).to receive(:servo_pulsewidth=).with(0)
       controller.release
     end
 
@@ -166,8 +177,44 @@ RSpec.describe ServoController do
 
   describe '#current_angle' do
     it 'returns the current angle' do
-      controller.move_to(60)
+      controller.move_to(60, smooth: false)
       expect(controller.current_angle).to eq(60)
+    end
+  end
+
+  describe 'smooth movement' do
+    let(:test_settings) do
+      {
+        'servo_min_pulse' => 500,
+        'servo_max_pulse' => 2400,
+        'servo_min_angle' => 0,
+        'servo_max_angle' => 180,
+        'servo_default_angle' => 90,
+        'servo_step_angle' => 10,
+        'servo_smooth_step' => 5,
+        'servo_smooth_delay_ms' => 1
+      }
+    end
+
+    it 'interpolates between positions' do
+      controller.move_to(90, smooth: false)
+      pulsewidths = []
+      allow(pwm_object).to receive(:servo_pulsewidth=) { |val| pulsewidths << val }
+
+      controller.move_to(100)
+
+      expect(pulsewidths.length).to be > 1
+      expect(pulsewidths.last).to be_within(1).of(1556)
+    end
+
+    it 'moves in correct direction for decreasing angle' do
+      controller.move_to(90, smooth: false)
+      pulsewidths = []
+      allow(pwm_object).to receive(:servo_pulsewidth=) { |val| pulsewidths << val }
+
+      controller.move_to(80)
+
+      expect(pulsewidths).to all(be <= 1450)
     end
   end
 end

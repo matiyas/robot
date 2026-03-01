@@ -5,27 +5,34 @@ RSpec.shared_context 'with mocked GPIO pins' do
 
   let(:left_motor) do
     {
-      in1: instance_double(Pigpio::IF::GPIO, write: nil),
-      in2: instance_double(Pigpio::IF::GPIO, write: nil)
+      in1: instance_double(Pigpio::UserGPIO, write: nil),
+      in2: instance_double(Pigpio::UserGPIO, write: nil)
     }
   end
 
   let(:right_motor) do
     {
-      in1: instance_double(Pigpio::IF::GPIO, write: nil),
-      in2: instance_double(Pigpio::IF::GPIO, write: nil)
+      in1: instance_double(Pigpio::UserGPIO, write: nil),
+      in2: instance_double(Pigpio::UserGPIO, write: nil)
     }
   end
+
+  let(:pwm_mock_object) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
 
   let(:pwm_pins) do
-    {
-      left: instance_double(Pigpio::IF::GPIO, pwm: nil),
-      right: instance_double(Pigpio::IF::GPIO, pwm: nil)
-    }
+    left_pin = instance_double(Pigpio::UserGPIO)
+    right_pin = instance_double(Pigpio::UserGPIO)
+    allow(left_pin).to receive(:pwm).and_return(pwm_mock_object)
+    allow(right_pin).to receive(:pwm).and_return(pwm_mock_object)
+    { left: left_pin, right: right_pin }
   end
 
+  let(:servo_pwm_object) { instance_double(Pigpio::PWM, 'servo_pulsewidth=': nil) }
+
   let(:servo_pin) do
-    instance_double(Pigpio::IF::GPIO, set_servo_pulsewidth: nil)
+    pin = instance_double(Pigpio::UserGPIO)
+    allow(pin).to receive(:pwm).and_return(servo_pwm_object)
+    pin
   end
 
   before do

@@ -19,16 +19,31 @@ module Pigpio
     PI_PUD_OFF = 0
   end
 
-  module IF
-    class GPIO
-      attr_accessor :mode, :pud
+  # PWM control object returned by UserGPIO#pwm
+  class PWM
+    attr_accessor :dutycycle, :servo_pulsewidth, :frequency, :range
+  end
 
-      def write(_value); end
+  # User GPIO class for pins 0-31
+  class UserGPIO
+    attr_accessor :mode, :pud
 
-      def pwm(_duty_cycle); end
-
-      def set_servo_pulsewidth(_pulse_width); end # rubocop:disable Naming/AccessorMethodName
+    def initialize
+      @pwm_object = PWM.new
     end
+
+    def write(_value); end
+
+    def read; end
+
+    def pwm
+      @pwm_object
+    end
+  end
+
+  # Legacy IF::GPIO for backward compatibility
+  module IF
+    class GPIO < UserGPIO; end
   end
 
   # Main Pigpio class accessible via Pigpio.new
@@ -42,7 +57,7 @@ module Pigpio
     end
 
     def gpio(_pin_number)
-      IF::GPIO.new
+      UserGPIO.new
     end
 
     def stop; end

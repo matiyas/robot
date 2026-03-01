@@ -54,7 +54,7 @@ class ServoController
     if smooth && target != @current_angle
       smooth_move(@current_angle, target)
     else
-      set_angle_immediate(target)
+      apply_angle(target)
     end
   end
 
@@ -116,6 +116,17 @@ class ServoController
     @logger.info 'ServoController cleanup'
   end
 
+  SETTING_DEFAULTS = {
+    'servo_min_pulse' => 500,
+    'servo_max_pulse' => 2400,
+    'servo_min_angle' => 0,
+    'servo_max_angle' => 180,
+    'servo_step_angle' => 10,
+    'servo_default_angle' => 90,
+    'servo_smooth_step' => 2,
+    'servo_smooth_delay_ms' => 15
+  }.freeze
+
   private
 
   # Loads servo settings from configuration hash
@@ -125,14 +136,15 @@ class ServoController
   #
   # @api private
   def load_settings(settings)
-    @min_pulse = settings['servo_min_pulse'] || 500
-    @max_pulse = settings['servo_max_pulse'] || 2400
-    @min_angle = settings['servo_min_angle'] || 0
-    @max_angle = settings['servo_max_angle'] || 180
-    @step_angle = settings['servo_step_angle'] || 10
-    @default_angle = settings['servo_default_angle'] || 90
-    @smooth_step_degrees = settings['servo_smooth_step'] || 2
-    @smooth_step_delay_ms = settings['servo_smooth_delay_ms'] || 15
+    config = SETTING_DEFAULTS.merge(settings || {})
+    @min_pulse = config['servo_min_pulse']
+    @max_pulse = config['servo_max_pulse']
+    @min_angle = config['servo_min_angle']
+    @max_angle = config['servo_max_angle']
+    @step_angle = config['servo_step_angle']
+    @default_angle = config['servo_default_angle']
+    @smooth_step_degrees = config['servo_smooth_step']
+    @smooth_step_delay_ms = config['servo_smooth_delay_ms']
   end
 
   # Converts angle to pulse width in microseconds
@@ -156,7 +168,7 @@ class ServoController
   # @return [void]
   #
   # @api private
-  def set_angle_immediate(angle)
+  def apply_angle(angle)
     @current_angle = angle
     pulse = angle_to_pulse(@current_angle)
     @pin.pwm.servo_pulsewidth = pulse
@@ -177,7 +189,7 @@ class ServoController
     while (direction.positive? && current < to_angle) || (direction.negative? && current > to_angle)
       current += direction * @smooth_step_degrees
       current = direction.positive? ? [current, to_angle].min : [current, to_angle].max
-      set_angle_immediate(current)
+      apply_angle(current)
       sleep(@smooth_step_delay_ms / 1000.0)
     end
 
