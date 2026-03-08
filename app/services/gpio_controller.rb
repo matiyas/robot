@@ -72,7 +72,7 @@ class GpioController < ControlInterface
     @logger.debug 'Moving forward'
     set_motor_direction(@gpio.left_motor, :forward)
     set_motor_direction(@gpio.right_motor, :forward)
-    start_pwm_ramp(%i[left right])
+    start_pwm_ramp
     auto_stop_after(duration) if duration
   end
 
@@ -88,7 +88,7 @@ class GpioController < ControlInterface
     @logger.debug 'Moving backward'
     set_motor_direction(@gpio.left_motor, :backward)
     set_motor_direction(@gpio.right_motor, :backward)
-    start_pwm_ramp(%i[left right])
+    start_pwm_ramp
     auto_stop_after(duration) if duration
   end
 
@@ -105,7 +105,7 @@ class GpioController < ControlInterface
     # Tank turn: left motor backward, right motor forward
     set_motor_direction(@gpio.left_motor, :backward)
     set_motor_direction(@gpio.right_motor, :forward)
-    start_pwm_ramp(%i[left right])
+    start_pwm_ramp
     auto_stop_after(duration) if duration
   end
 
@@ -122,7 +122,7 @@ class GpioController < ControlInterface
     # Tank turn: left motor forward, right motor backward
     set_motor_direction(@gpio.left_motor, :forward)
     set_motor_direction(@gpio.right_motor, :backward)
-    start_pwm_ramp(%i[left right])
+    start_pwm_ramp
     auto_stop_after(duration) if duration
   end
 
@@ -262,19 +262,19 @@ class GpioController < ControlInterface
     @movement_thread = nil
   end
 
-  # Starts PWM ramp-up for the specified motors
+  # Starts PWM ramp-up for the shared motors enable pin
   #
-  # Triggers soft-start PWM ramping for the given motors if a PWM ramper
-  # is available. This prevents inrush current spikes that can cause
-  # Raspberry Pi resets.
+  # Triggers soft-start PWM ramping for the shared enable pin if a PWM ramper
+  # is available. Both motors share a single enable pin (EEP wired together),
+  # so ramping is done once for both. This prevents inrush current spikes
+  # that can cause Raspberry Pi resets.
   #
-  # @param motors [Array<Symbol>] Motor identifiers (:left, :right, :turret)
   # @return [void]
   #
   # @api private
-  def start_pwm_ramp(motors)
+  def start_pwm_ramp
     return unless @pwm_ramper
 
-    motors.each { |motor| @pwm_ramper.ramp_up(motor) }
+    @pwm_ramper.ramp_up(:motors)
   end
 end

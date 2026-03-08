@@ -524,33 +524,29 @@ RSpec.describe GpioController do
     end
 
     describe '#move_forward' do
-      it 'triggers PWM ramp for left and right motors' do
-        expect(pwm_ramper).to receive(:ramp_up).with(:left)
-        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+      it 'triggers PWM ramp for shared motors enable' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:motors)
         controller_with_pwm.move_forward
       end
     end
 
     describe '#move_backward' do
-      it 'triggers PWM ramp for left and right motors' do
-        expect(pwm_ramper).to receive(:ramp_up).with(:left)
-        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+      it 'triggers PWM ramp for shared motors enable' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:motors)
         controller_with_pwm.move_backward
       end
     end
 
     describe '#turn_left' do
-      it 'triggers PWM ramp for left and right motors' do
-        expect(pwm_ramper).to receive(:ramp_up).with(:left)
-        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+      it 'triggers PWM ramp for shared motors enable' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:motors)
         controller_with_pwm.turn_left
       end
     end
 
     describe '#turn_right' do
-      it 'triggers PWM ramp for left and right motors' do
-        expect(pwm_ramper).to receive(:ramp_up).with(:left)
-        expect(pwm_ramper).to receive(:ramp_up).with(:right)
+      it 'triggers PWM ramp for shared motors enable' do
+        expect(pwm_ramper).to receive(:ramp_up).with(:motors)
         controller_with_pwm.turn_right
       end
     end

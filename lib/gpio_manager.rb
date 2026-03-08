@@ -16,9 +16,9 @@ require 'pigpio'
 # - Cleanup and reset on shutdown
 #
 # Each wheel motor uses two GPIO pins (IN1 and IN2) connected to a DRV8833
-# H-bridge driver. The turret uses a single GPIO pin for SG90 servo control.
-# The manager groups these pins into motor hashes for easy access by the
-# GpioController.
+# H-bridge driver. Both DRV8833 drivers share a single enable pin (EEP wired
+# together) for PWM speed control. The turret uses a single GPIO pin for
+# SG90 servo control.
 #
 # Configuration file format (config/gpio_pins.yml):
 #   motor_left:
@@ -27,6 +27,7 @@ require 'pigpio'
 #   motor_right:
 #     in1: 22
 #     in2: 23
+#   motors_enable: 12
 #   servo_turret:
 #     signal: 19
 #
@@ -46,7 +47,7 @@ class GpioManager
   #   @return [Hash] Right motor pins with keys :in1 and :in2
   #
   # @!attribute [r] pwm_pins
-  #   @return [Hash, nil] PWM pins keyed by motor symbol, or nil if PWM unavailable
+  #   @return [Hash, nil] PWM pins with :motors key for shared enable, or nil if unavailable
   #
   # @!attribute [r] servo_pin
   #   @return [Pigpio::IF::GPIO, nil] Servo signal pin, or nil if not configured
@@ -122,22 +123,26 @@ class GpioManager
     pin
   end
 
-  # Initializes PWM pins for wheel motor speed control
+  # Initializes shared PWM pin for wheel motor speed control
   #
-  # Reads enable pin numbers from config and creates GPIO objects for PWM.
-  # Returns nil if no enable pins are configured or initialization fails.
-  # This provides backward compatibility when PWM pins are not connected.
+  # Reads the shared enable pin number from config and creates GPIO object.
+  # Both DRV8833 drivers have their EEP pins wired together, so a single
+  # PWM signal controls speed for both motors simultaneously.
+  # Returns nil if not configured or initialization fails.
   #
-  # @return [Hash, nil] PWM pins keyed by motor symbol, or nil if unavailable
+  # @return [Hash, nil] PWM pins with :motors key, or nil if unavailable
   #
   # @api private
   def initialize_pwm_pins
-    pins = {}
-    { left: 'motor_left', right: 'motor_right' }.each do |motor_sym, config_key|
-      pin = setup_pwm_pin(motor_sym, config_key)
-      pins[motor_sym] = pin if pin
-    end
-    pins.empty? ? nil : pins
+    enable_pin = @config['motors_enable']
+    return nil unless enable_pin
+
+    pin = setup_output_pin(enable_pin)
+    @logger.info "Shared motors PWM initialized on GPIO #{enable_pin}"
+    { motors: pin }
+  rescue StandardError => e
+    @logger.warn "Shared motors PWM initialization failed: #{e.message}"
+    nil
   end
 
   # Initializes servo signal pin for turret control
@@ -160,25 +165,6 @@ class GpioManager
     pin
   rescue StandardError => e
     @logger.warn "Servo initialization failed: #{e.message}"
-    nil
-  end
-
-  # Sets up a single PWM pin for a motor
-  #
-  # @param motor_sym [Symbol] Motor identifier
-  # @param config_key [String] Configuration key for the motor
-  # @return [Pigpio::IF::GPIO, nil] Configured GPIO object or nil if not available
-  #
-  # @api private
-  def setup_pwm_pin(motor_sym, config_key)
-    enable_pin = @config.dig(config_key, 'enable')
-    return nil unless enable_pin
-
-    pin = setup_output_pin(enable_pin)
-    @logger.debug "PWM initialized on GPIO #{enable_pin} for #{motor_sym} motor"
-    pin
-  rescue StandardError => e
-    @logger.warn "PWM initialization failed for #{motor_sym} motor: #{e.message}"
     nil
   end
 

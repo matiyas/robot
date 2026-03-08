@@ -8,29 +8,15 @@ RSpec.describe PwmRamper do
 
   include_context 'with test logger'
 
-  let(:left_pwm_obj) { instance_double(Pigpio::PWM) }
-  let(:right_pwm_obj) { instance_double(Pigpio::PWM) }
-  let(:turret_pwm_obj) { instance_double(Pigpio::PWM) }
+  let(:motors_pwm_obj) { instance_double(Pigpio::PWM) }
 
-  let(:left_pwm) do
+  let(:motors_pwm) do
     pin = instance_double(Pigpio::UserGPIO)
-    allow(pin).to receive(:pwm).and_return(left_pwm_obj)
+    allow(pin).to receive(:pwm).and_return(motors_pwm_obj)
     pin
   end
 
-  let(:right_pwm) do
-    pin = instance_double(Pigpio::UserGPIO)
-    allow(pin).to receive(:pwm).and_return(right_pwm_obj)
-    pin
-  end
-
-  let(:turret_pwm) do
-    pin = instance_double(Pigpio::UserGPIO)
-    allow(pin).to receive(:pwm).and_return(turret_pwm_obj)
-    pin
-  end
-
-  let(:pwm_pins) { { left: left_pwm, right: right_pwm, turret: turret_pwm } }
+  let(:pwm_pins) { { motors: motors_pwm } }
   let(:settings) do
     {
       'pwm_ramp_duration' => 100,
@@ -39,9 +25,7 @@ RSpec.describe PwmRamper do
   end
 
   before do
-    allow(left_pwm_obj).to receive(:dutycycle=)
-    allow(right_pwm_obj).to receive(:dutycycle=)
-    allow(turret_pwm_obj).to receive(:dutycycle=)
+    allow(motors_pwm_obj).to receive(:dutycycle=)
   end
 
   describe '#initialize' do
@@ -59,29 +43,17 @@ RSpec.describe PwmRamper do
   end
 
   describe '#ramp_up' do
-    it 'sets duty cycle incrementally for left motor' do
-      expect(left_pwm_obj).to receive(:dutycycle=).at_least(:once)
-      ramper.ramp_up(:left)
-      sleep(0.15)
-    end
-
-    it 'sets duty cycle incrementally for right motor' do
-      expect(right_pwm_obj).to receive(:dutycycle=).at_least(:once)
-      ramper.ramp_up(:right)
-      sleep(0.15)
-    end
-
-    it 'sets duty cycle incrementally for turret motor' do
-      expect(turret_pwm_obj).to receive(:dutycycle=).at_least(:once)
-      ramper.ramp_up(:turret)
+    it 'sets duty cycle incrementally for motors' do
+      expect(motors_pwm_obj).to receive(:dutycycle=).at_least(:once)
+      ramper.ramp_up(:motors)
       sleep(0.15)
     end
 
     it 'reaches max duty cycle at end of ramp' do
       duty_cycles = []
-      allow(left_pwm_obj).to receive(:dutycycle=) { |dc| duty_cycles << dc }
+      allow(motors_pwm_obj).to receive(:dutycycle=) { |dc| duty_cycles << dc }
 
-      ramper.ramp_up(:left)
+      ramper.ramp_up(:motors)
       sleep(0.15)
 
       expect(duty_cycles.last).to eq(255)
@@ -92,34 +64,34 @@ RSpec.describe PwmRamper do
     end
 
     it 'cancels existing ramp before starting new one' do
-      expect(left_pwm_obj).to receive(:dutycycle=).at_least(:once)
+      expect(motors_pwm_obj).to receive(:dutycycle=).at_least(:once)
 
-      ramper.ramp_up(:left)
+      ramper.ramp_up(:motors)
       sleep(0.05)
-      ramper.ramp_up(:left)
+      ramper.ramp_up(:motors)
       sleep(0.15)
     end
 
     it 'logs ramp progress' do
-      ramper.ramp_up(:left)
+      ramper.ramp_up(:motors)
       sleep(0.15)
 
-      expect(logged_debug.any? { |msg| msg.include?('PWM left: ramping') }).to be true
+      expect(logged_debug.any? { |msg| msg.include?('PWM motors: ramping') }).to be true
       expect(logged_debug.any? { |msg| msg.include?('ramp complete') }).to be true
     end
   end
 
   describe '#stop' do
     it 'sets duty cycle to 0 immediately' do
-      expect(left_pwm_obj).to receive(:dutycycle=).with(0)
-      ramper.stop(:left)
+      expect(motors_pwm_obj).to receive(:dutycycle=).with(0)
+      ramper.stop(:motors)
     end
 
     it 'cancels any active ramp' do
-      ramper.ramp_up(:left)
+      ramper.ramp_up(:motors)
       sleep(0.02)
-      expect(left_pwm_obj).to receive(:dutycycle=).with(0)
-      ramper.stop(:left)
+      expect(motors_pwm_obj).to receive(:dutycycle=).with(0)
+      ramper.stop(:motors)
     end
 
     it 'handles missing motor gracefully' do
@@ -128,10 +100,8 @@ RSpec.describe PwmRamper do
   end
 
   describe '#stop_all' do
-    it 'stops all motors' do
-      expect(left_pwm_obj).to receive(:dutycycle=).with(0)
-      expect(right_pwm_obj).to receive(:dutycycle=).with(0)
-      expect(turret_pwm_obj).to receive(:dutycycle=).with(0)
+    it 'stops motors' do
+      expect(motors_pwm_obj).to receive(:dutycycle=).with(0)
 
       ramper.stop_all
     end
@@ -139,8 +109,8 @@ RSpec.describe PwmRamper do
 
   describe '#set_duty_cycle' do
     it 'sets immediate duty cycle without ramping' do
-      expect(left_pwm_obj).to receive(:dutycycle=).with(128)
-      ramper.set_duty_cycle(:left, 128)
+      expect(motors_pwm_obj).to receive(:dutycycle=).with(128)
+      ramper.set_duty_cycle(:motors, 128)
     end
 
     it 'handles missing motor gracefully' do
@@ -148,55 +118,38 @@ RSpec.describe PwmRamper do
     end
 
     it 'logs duty cycle changes' do
-      ramper.set_duty_cycle(:left, 128)
+      ramper.set_duty_cycle(:motors, 128)
       expect(logged_debug.any? { |msg| msg.include?('duty cycle set to 128') }).to be true
     end
   end
 
   describe '#available?' do
     it 'returns true for configured motors' do
-      expect(ramper.available?(:left)).to be true
-      expect(ramper.available?(:right)).to be true
-      expect(ramper.available?(:turret)).to be true
+      expect(ramper.available?(:motors)).to be true
     end
 
     it 'returns false for unconfigured motors' do
       expect(ramper.available?(:nonexistent)).to be false
     end
 
-    context 'with partial pwm_pins' do
-      let(:pwm_pins) { { left: left_pwm } }
+    context 'with nil pwm_pins' do
+      let(:pwm_pins) { nil }
 
-      it 'returns true only for configured motors' do
-        expect(ramper.available?(:left)).to be true
-        expect(ramper.available?(:right)).to be false
+      it 'returns false for all motors' do
+        ramper_without_pins = described_class.new(nil, settings, test_logger)
+        expect(ramper_without_pins.available?(:motors)).to be false
       end
     end
   end
 
   describe 'thread safety' do
-    it 'handles concurrent ramp_up calls' do
-      threads = []
-      expect(left_pwm_obj).to receive(:dutycycle=).at_least(:once)
-      expect(right_pwm_obj).to receive(:dutycycle=).at_least(:once)
+    it 'handles concurrent ramp and stop calls' do
+      expect(motors_pwm_obj).to receive(:dutycycle=).at_least(:once)
 
-      threads << Thread.new { ramper.ramp_up(:left) }
-      threads << Thread.new { ramper.ramp_up(:right) }
-
-      threads.each(&:join)
-      sleep(0.15)
-    end
-
-    it 'handles concurrent stop calls' do
-      expect(left_pwm_obj).to receive(:dutycycle=).at_least(:once)
-      expect(right_pwm_obj).to receive(:dutycycle=).at_least(:once)
-
-      ramper.ramp_up(:left)
-      ramper.ramp_up(:right)
+      ramper.ramp_up(:motors)
 
       threads = []
-      threads << Thread.new { ramper.stop(:left) }
-      threads << Thread.new { ramper.stop(:right) }
+      threads << Thread.new { ramper.stop(:motors) }
 
       threads.each(&:join)
     end
@@ -207,11 +160,11 @@ RSpec.describe PwmRamper do
 
     it 'uses default ramp duration of 500ms' do
       duty_cycles = []
-      allow(left_pwm_obj).to receive(:dutycycle=) { |dc| duty_cycles << dc }
+      allow(motors_pwm_obj).to receive(:dutycycle=) { |dc| duty_cycles << dc }
 
-      ramper.ramp_up(:left)
+      ramper.ramp_up(:motors)
       sleep(0.1)
-      ramper.stop(:left)
+      ramper.stop(:motors)
 
       expect(duty_cycles).not_to be_empty
     end

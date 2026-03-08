@@ -4,12 +4,13 @@
 motor_left:
   in1: 17  # Forward direction
   in2: 18  # Backward direction
-  enable: 12  # Future: PWM speed control (hardware PWM capable)
 
 motor_right:
   in1: 22  # Forward direction
   in2: 23  # Backward direction
-  enable: 13  # Future: PWM speed control (hardware PWM capable)
+
+# Shared enable pin for both DRV8833 drivers (EEP pins wired together)
+motors_enable: 12  # PWM speed control for both motors
 
 # Turret servo (SG90)
 # Direct GPIO control - no DRV8833 driver needed

@@ -59,7 +59,7 @@ class MockController < ControlInterface
   # @return [void]
   def move_forward(duration: nil)
     log_action('FORWARD', duration)
-    log_pwm_ramp(%i[left right])
+    log_pwm_ramp
     simulate_movement(duration) if duration
   end
 
@@ -72,7 +72,7 @@ class MockController < ControlInterface
   # @return [void]
   def move_backward(duration: nil)
     log_action('BACKWARD', duration)
-    log_pwm_ramp(%i[left right])
+    log_pwm_ramp
     simulate_movement(duration) if duration
   end
 
@@ -85,7 +85,7 @@ class MockController < ControlInterface
   # @return [void]
   def turn_left(duration: nil)
     log_action('TURN LEFT', duration)
-    log_pwm_ramp(%i[left right])
+    log_pwm_ramp
     simulate_movement(duration) if duration
   end
 
@@ -98,7 +98,7 @@ class MockController < ControlInterface
   # @return [void]
   def turn_right(duration: nil)
     log_action('TURN RIGHT', duration)
-    log_pwm_ramp(%i[left right])
+    log_pwm_ramp
     simulate_movement(duration) if duration
   end
 
@@ -181,21 +181,17 @@ class MockController < ControlInterface
     end
   end
 
-  # Logs PWM ramp simulation for specified motors
+  # Logs PWM ramp simulation for shared motors enable
   #
   # Only logs when PWM simulation is enabled. Used to verify PWM
   # integration in development mode.
   #
-  # @param motors [Array<Symbol>] Motor identifiers (:left, :right, :turret)
-  #
   # @return [void]
   #
   # @api private
-  def log_pwm_ramp(motors)
+  def log_pwm_ramp
     return unless @pwm_enabled
 
-    motors.each do |motor|
-      @logger.debug "PWM #{motor}: simulating ramp-up"
-    end
+    @logger.debug 'PWM motors: simulating ramp-up'
   end
 end

@@ -12,9 +12,8 @@
 #
 # @example Basic usage
 #   ramper = PwmRamper.new(pwm_pins, settings, logger)
-#   ramper.ramp_up(:left)   # Ramps left motor to full power
-#   ramper.ramp_up(:right)  # Ramps right motor independently
-#   ramper.stop(:left)      # Immediately stops left motor
+#   ramper.ramp_up(:motors)  # Ramps shared motors enable to full power
+#   ramper.stop(:motors)     # Immediately stops motors
 #
 # @see GpioController Uses PwmRamper for soft-start
 class PwmRamper
@@ -29,7 +28,7 @@ class PwmRamper
 
   # Initializes the PWM ramper
   #
-  # @param pwm_pins [Hash] PWM pin objects keyed by motor symbol (:left, :right, :turret)
+  # @param pwm_pins [Hash] PWM pin objects keyed by symbol (:motors for shared enable)
   # @param settings [Hash] Configuration with pwm_ramp_duration key
   # @param logger [Logger, nil] Logger instance for debugging
   def initialize(pwm_pins, settings, logger = nil)
@@ -45,7 +44,7 @@ class PwmRamper
   # Cancels any existing ramp for this motor before starting a new one.
   # The ramp runs in a background thread and returns immediately.
   #
-  # @param motor [Symbol] Motor identifier (:left, :right, :turret)
+  # @param motor [Symbol] Motor identifier (:motors for shared enable)
   # @return [void]
   def ramp_up(motor)
     cancel_ramp(motor)
@@ -60,7 +59,7 @@ class PwmRamper
 
   # Immediately stops motor PWM and cancels any active ramp
   #
-  # @param motor [Symbol] Motor identifier (:left, :right, :turret)
+  # @param motor [Symbol] Motor identifier (:motors for shared enable)
   # @return [void]
   def stop(motor)
     cancel_ramp(motor)
@@ -71,12 +70,12 @@ class PwmRamper
   #
   # @return [void]
   def stop_all
-    %i[left right turret].each { |motor| stop(motor) }
+    stop(:motors)
   end
 
   # Sets immediate duty cycle without ramping
   #
-  # @param motor [Symbol] Motor identifier (:left, :right, :turret)
+  # @param motor [Symbol] Motor identifier (:motors for shared enable)
   # @param duty_cycle [Integer] Duty cycle value (0 to 255)
   # @return [void]
   def set_duty_cycle(motor, duty_cycle)
@@ -89,7 +88,7 @@ class PwmRamper
 
   # Checks if PWM is available for a motor
   #
-  # @param motor [Symbol] Motor identifier (:left, :right, :turret)
+  # @param motor [Symbol] Motor identifier (:motors for shared enable)
   # @return [Boolean] true if PWM pin exists for this motor
   def available?(motor)
     @pwm_pins.key?(motor) && !@pwm_pins[motor].nil?

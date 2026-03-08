@@ -333,79 +333,70 @@ RSpec.describe GpioManager do
   end
 
   describe '#pwm_pins' do
-    context 'when enable pins are configured' do
+    context 'when shared motors_enable is configured' do
       let(:gpio_config_with_pwm) do
         {
-          'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
-          'motor_right' => { 'in1' => 22, 'in2' => 23, 'enable' => 13 },
+          'motor_left' => { 'in1' => 17, 'in2' => 18 },
+          'motor_right' => { 'in1' => 22, 'in2' => 23 },
+          'motors_enable' => 12,
           'servo_turret' => { 'signal' => 19 }
         }
       end
 
-      let(:left_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
-      let(:right_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
+      let(:motors_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
 
-      let(:left_pwm_pin) do
+      let(:motors_pwm_pin) do
         pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
-        allow(pin).to receive(:pwm).and_return(left_pwm_obj)
-        pin
-      end
-
-      let(:right_pwm_pin) do
-        pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
-        allow(pin).to receive(:pwm).and_return(right_pwm_obj)
+        allow(pin).to receive(:pwm).and_return(motors_pwm_obj)
         pin
       end
 
       before do
         allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_with_pwm)
-        allow(mock_pigpio).to receive(:gpio).with(12).and_return(left_pwm_pin)
-        allow(mock_pigpio).to receive(:gpio).with(13).and_return(right_pwm_pin)
+        allow(mock_pigpio).to receive(:gpio).with(12).and_return(motors_pwm_pin)
       end
 
-      it 'returns hash with PWM pins for wheel motors' do
+      it 'returns hash with shared PWM pin for motors' do
         manager = described_class.new(config_path, test_logger)
         expect(manager.pwm_pins).to be_a(Hash)
-        expect(manager.pwm_pins.keys).to contain_exactly(:left, :right)
+        expect(manager.pwm_pins.keys).to contain_exactly(:motors)
       end
 
-      it 'initializes PWM pins as outputs' do
-        expect(left_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
-        expect(right_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
+      it 'initializes PWM pin as output' do
+        expect(motors_pwm_pin).to receive(:mode=).with(Pigpio::Constant::PI_OUTPUT)
         described_class.new(config_path, test_logger)
       end
 
       it 'logs PWM initialization' do
         described_class.new(config_path, test_logger)
-        expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('left') }).to be true
-        expect(logged_debug.any? { |msg| msg.include?('PWM initialized') && msg.include?('right') }).to be true
+        expect(logged_info.any? { |msg| msg.include?('Shared motors PWM initialized') }).to be true
       end
 
-      it 'resets PWM duty cycles in reset_all_pins' do
+      it 'resets PWM duty cycle in reset_all_pins' do
         manager = described_class.new(config_path, test_logger)
 
-        expect(left_pwm_obj).to receive(:dutycycle=).with(0)
-        expect(right_pwm_obj).to receive(:dutycycle=).with(0)
+        expect(motors_pwm_obj).to receive(:dutycycle=).with(0)
         manager.reset_all_pins
       end
     end
 
-    context 'when enable pins are not configured' do
+    context 'when motors_enable is not configured' do
       it 'returns nil for pwm_pins' do
         expect(gpio_manager.pwm_pins).to be_nil
       end
 
       it 'does not log PWM initialization' do
         described_class.new(config_path, test_logger)
-        expect(logged_debug.none? { |msg| msg.include?('PWM initialized') }).to be true
+        expect(logged_info.none? { |msg| msg.include?('Shared motors PWM initialized') }).to be true
       end
     end
 
     context 'when enable pin initialization fails' do
       let(:gpio_config_with_pwm) do
         {
-          'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
+          'motor_left' => { 'in1' => 17, 'in2' => 18 },
           'motor_right' => { 'in1' => 22, 'in2' => 23 },
+          'motors_enable' => 12,
           'servo_turret' => { 'signal' => 19 }
         }
       end
@@ -417,41 +408,12 @@ RSpec.describe GpioManager do
 
       it 'logs warning and continues' do
         described_class.new(config_path, test_logger)
-        expect(logged_warn.any? { |msg| msg.include?('PWM initialization failed') }).to be true
+        expect(logged_warn.any? { |msg| msg.include?('Shared motors PWM initialization failed') }).to be true
       end
 
-      it 'returns nil if all PWM pins fail' do
+      it 'returns nil if PWM pin fails' do
         manager = described_class.new(config_path, test_logger)
         expect(manager.pwm_pins).to be_nil
-      end
-    end
-
-    context 'with partial enable pin configuration' do
-      let(:gpio_config_partial_pwm) do
-        {
-          'motor_left' => { 'in1' => 17, 'in2' => 18, 'enable' => 12 },
-          'motor_right' => { 'in1' => 22, 'in2' => 23 },
-          'servo_turret' => { 'signal' => 19 }
-        }
-      end
-
-      let(:left_pwm_obj) { instance_double(Pigpio::PWM, 'dutycycle=': nil) }
-
-      let(:left_pwm_pin) do
-        pin = instance_double(Pigpio::UserGPIO, 'mode=': nil, 'pud=': nil, write: nil)
-        allow(pin).to receive(:pwm).and_return(left_pwm_obj)
-        pin
-      end
-
-      before do
-        allow(YAML).to receive(:load_file).with(config_path).and_return(gpio_config_partial_pwm)
-        allow(mock_pigpio).to receive(:gpio).with(12).and_return(left_pwm_pin)
-      end
-
-      it 'only includes configured PWM pins' do
-        manager = described_class.new(config_path, test_logger)
-        expect(manager.pwm_pins).to be_a(Hash)
-        expect(manager.pwm_pins.keys).to contain_exactly(:left)
       end
     end
   end
